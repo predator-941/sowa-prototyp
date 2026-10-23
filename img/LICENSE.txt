@@ -1,0 +1,3 @@
+Obrazki zwierząt pochodzą z Noto Emoji (Google), licencja Apache 2.0:
+https://github.com/googlefonts/noto-emoji  (pakiet npm @svgmoji/noto)
+lew.svg: głowa z Noto Emoji, tułów dorysowany. Docelowo do zastąpienia własnymi ilustracjami.

@@ -49,7 +49,7 @@ DECKS = [
    {"id":"kura","snd":"hen","e":"🐔","pl":"kura","en":"hen","fpl":"Kura znosi jajka i robi ko, ko, ko!","fen":"A hen lays eggs. Cluck cluck!","c":"#ffc93c"},
    {"id":"owca","snd":"sheep","e":"🐑","pl":"owca","en":"sheep","fpl":"Owca ma ciepłą wełnę i robi beee!","fen":"A sheep has warm wool. Baa!","c":"#4fc3f7"},
    {"id":"kaczka","snd":"duck","e":"🦆","pl":"kaczka","en":"duck","fpl":"Kaczka pływa w stawie i robi kwa, kwa!","fen":"A duck swims in the pond. Quack!","c":"#3ec9c0"},
-   {"id":"lew","snd":"lion","e":"🦁","pl":"lew","en":"lion","fpl":"Lew to król zwierząt. Groźnie ryczy: wrrraaau!","fen":"The lion is the king of animals. Roar!","c":"#ff8a3d"},
+   {"id":"lew","snd":"lion","e":"🦁","pl":"lew","en":"lion","fpl":"Lew to król zwierząt. Groźnie ryczy: wrrraaau!","fen":"The lion is the king of animals. Roar!","c":"#5fd39a"},
    {"id":"slon","snd":"elephant","e":"🐘","pl":"słoń","en":"elephant","fpl":"Słoń ma długą trąbę i wielkie uszy.","fen":"An elephant has a long trunk and big ears.","c":"#a58cff"},
    {"id":"zyrafa","snd":"munch","e":"🦒","pl":"żyrafa","en":"giraffe","fpl":"Żyrafa ma bardzo długą szyję i je liście z drzew.","fen":"A giraffe has a very long neck.","c":"#ffc93c"},
    {"id":"malpa","snd":"monkey","e":"🐵","pl":"małpka","en":"monkey","fpl":"Małpka skacze po drzewach i lubi banany!","fen":"A monkey climbs trees and loves bananas!","c":"#b388ff"},

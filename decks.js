@@ -275,7 +275,7 @@ window.DECKS = [
     "en": "lion",
     "fpl": "Lew to król zwierząt. Groźnie ryczy: wrrraaau!",
     "fen": "The lion is the king of animals. Roar!",
-    "c": "#ff8a3d"
+    "c": "#5fd39a"
    },
    {
     "id": "slon",

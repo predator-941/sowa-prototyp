@@ -7,11 +7,12 @@ Gra dla dzieci: sowa zadaje pytania, dziecko pokazuje wydrukowaną kartę przedn
 - `vendor/`: biblioteka qr-scanner (licencja MIT) do odczytu kodów, działa w tle, nie blokuje gry.
 - `decks.js`: dane wszystkich talii dla gry (generowane, nie edytuj ręcznie).
 - `karty/`: PDF-y do druku, po jednym na talię (Pojazdy, Zwierzęta, Warzywa i owoce, Wieczór, Emocje), plus `sowa-nakladka.pdf`: tekturowa sowa na telefon, która chowa ekran (generuje ją `tools/make_overlay.py`), oraz `sowa-pacynka.pdf`: sowa zakładana na ekran, z otworami na oczy i dziób z gry (`tools/make_puppet.py`).
+- `img/`: ostre obrazki kart (SVG, nazwa = id karty). Jeśli karta ma tu plik, PDF używa go zamiast emoji. Teraz są tu zwierzęta z Noto Emoji (licencja w `img/LICENSE.txt`).
 - `tools/decks.py`: **tu dodajesz i edytujesz talie**: karty, ciekawostki, przygody, śmieszne odpowiedzi.
 - `tools/make_cards.py`: z `decks.py` generuje `decks.js` i PDF-y (wymaga `pip install qrcode playwright`).
 
 ## Kody kart
-Każda karta ma kod QR z tekstem `SOWA1:<id>`, np. `SOWA1:karetka`.
+Przód karty to duży obrazek, tył to kod QR na środku z ramką do trzymania. Kod ma tekst `S1:<id>`, np. `S1:karetka` (stare `SOWA1:` też działa).
 Id kart są w `tools/decks.py` i muszą być unikalne we wszystkich taliach.
 
 ## Uruchomienie
