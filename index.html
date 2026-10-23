@@ -3,8 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>Sowa Pojazdy</title>
+<title>Gra z Sową</title>
 <meta name="theme-color" content="#1d1a4a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sowa">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap">
 <style>
@@ -89,7 +96,7 @@ video.mirror{transform:scaleX(-1)}
 @keyframes blink{0%,94%,100%{transform:scaleY(0)}97%{transform:scaleY(1)}}
 @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
 /* puppet mode: black screen, only eyes and beak show through holes in the cardboard owl */
-#puppet{position:fixed;inset:0;background:#000;z-index:20;touch-action:none;--er:132px;--bw:112px}
+#puppet{position:fixed;inset:0;background:#000;z-index:20;touch-action:none;--er:160px;--bw:140px}
 .pe{position:absolute;width:var(--er);height:var(--er);margin:calc(var(--er)/-2) 0 0 calc(var(--er)/-2);border-radius:50%;background:#FFF8E6;overflow:hidden}
 .pupil{position:absolute;left:27%;top:29%;width:46%;height:46%;border-radius:50%;background:#1d1a4a;transition:transform .25s}
 .pupil::after{content:"";position:absolute;width:32%;height:32%;left:56%;top:16%;border-radius:50%;background:#fff}
@@ -104,7 +111,16 @@ video.mirror{transform:scaleX(-1)}
 .pb .bl{position:absolute;left:22%;top:40%;width:56%;height:36%;background:#D9822B;clip-path:polygon(0 0,100% 0,50% 100%);transform-origin:50% 0}
 .pb.talk .bl{animation:chomp .15s ease-in-out infinite alternate}
 @keyframes chomp{to{transform:translateY(55%) scaleY(1.25)}}
-#puppet.cal .pe,#puppet.cal .pb{outline:3px dashed #5fd39a;outline-offset:4px}
+#puppet.cal .unset{visibility:hidden}
+#puppet.cal{animation:calGlow 1.6s ease-in-out infinite alternate}
+@keyframes calGlow{from{background:#000}to{background:#2b2766}}
+/* install banner + iOS instructions */
+#install{display:flex;align-items:center;gap:10px;background:var(--sky-2);border-radius:18px;padding:10px 14px;max-width:420px;text-align:left;font-size:14px;color:var(--ink)}
+#install b{font-family:var(--display)} #install .x{margin-left:auto;background:none;border:0;color:var(--dim);font-size:20px}
+#iosHelp{position:fixed;inset:0;z-index:30;background:rgba(10,8,40,.92);display:flex;align-items:center;justify-content:center;padding:24px}
+#iosHelp .box{background:var(--ink);color:var(--sky);border-radius:24px;padding:22px;max-width:360px;font-size:17px;line-height:1.45}
+#iosHelp ol{padding-left:22px;margin:10px 0 16px} #iosHelp h2{font-family:var(--display);margin:0 0 4px}
+#iosHelp .sh{display:inline-block;border:2px solid var(--sky);border-radius:6px;padding:0 5px;font-weight:800}
 #calHelp{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);width:min(90%,420px);text-align:center;color:#FFF8E6;font:600 15px var(--body);line-height:1.4;display:none}
 #puppet.cal #calHelp{display:block}
 #calHelp small{color:var(--dim)}
@@ -149,9 +165,11 @@ video.mirror{transform:scaleX(-1)}
   </div>
   <div class="modes" role="group" aria-label="Sowa">
     <button class="chip" id="pupOn" aria-pressed="false">🦉 Sowa-pacynka</button>
-    <button class="chip" id="pupCal">⚙️ Kalibruj</button>
+    <button class="chip" id="pupCal">⚙️ Ustaw sowę</button>
   </div>
   <button class="big" id="go">Zaczynamy!</button>
+  <div id="install" hidden><span style="font-size:26px">📲</span><span><b>Dodaj Sowę do ekranu</b><br>Gra otworzy się jak aplikacja, na całym ekranie.</span>
+    <button class="chip" id="instBtn">Dodaj</button><button class="x" id="instX" aria-label="Zamknij">×</button></div>
   <p class="note">Telefon postaw na stole, tak żeby przednia kamera widziała dziecko. Karty wydrukujesz z folderu „karty”.</p>
 </div>
 
@@ -181,11 +199,16 @@ video.mirror{transform:scaleX(-1)}
   </div>
 </div>
 <canvas id="cv" hidden></canvas>
+<div id="iosHelp" hidden><div class="box"><h2>Dodaj Sowę do ekranu</h2>
+  <ol><li>Otwórz tę stronę w <b>Safari</b>.</li><li>Stuknij <span class="sh">⬆︎</span> <b>Udostępnij</b> na dole ekranu.</li>
+  <li>Przewiń i wybierz <b>„Do ekranu początkowego”</b>.</li><li>Stuknij <b>Dodaj</b>. Ikonka sowy pojawi się na ekranie.</li></ol>
+  Potem otwieraj grę z ikonki: bez paska przeglądarki, na całym ekranie.<br><br>
+  <button class="big" id="iosOk" style="width:100%">Rozumiem</button></div></div>
 <div id="puppet" hidden>
   <div class="pe" id="peL"><div class="pupil"></div><div class="lid"></div><div class="cheek"></div></div>
   <div class="pe" id="peR"><div class="pupil"></div><div class="lid"></div><div class="cheek"></div></div>
   <div class="pb" id="pb"><div class="bu"></div><div class="bl"></div></div>
-  <div id="calHelp"><b>Kalibracja</b><br>Załóż sowę na telefon. Przesuń palcem kółka pod otwory: oczy i dziób.<br>Gdy pasują, stuknij dwa razy w dziób.<br><small>Żeby wyjść z sowy: przytrzymaj palec na ekranie 2 sekundy.</small></div>
+  <div id="calHelp"><b>Ustawianie sowy</b><br><span id="calStep">Załóż sowę na telefon i dotknij palcem przez lewe oko.</span><br><small>Żeby wyjść z sowy: przytrzymaj palec na ekranie 2 sekundy.</small></div>
 </div>
 
 <script type="module">import QrScanner from "./vendor/qr-scanner.min.js"; window.QrScanner=QrScanner; window.dispatchEvent(new Event("qrready"));</script>
@@ -404,27 +427,33 @@ let puppetOn=false, forceCal=false, cal=null;
 const CAL_KEY="sowa-pacynka";
 function loadCal(){ try{ cal=JSON.parse(localStorage.getItem(CAL_KEY)); }catch(e){ cal=null; } return !!cal; }
 function saveCal(){ try{ localStorage.setItem(CAL_KEY,JSON.stringify(cal)); }catch(e){} }
-function placePuppet(){ const W=innerWidth,H=innerHeight, c=cal||{l:[.5-78/W,.29],r:[.5+78/W,.29],b:[.5,.43]};
+function placePuppet(){ const W=innerWidth,H=innerHeight, c=cal||{l:[.5-86/W,.29],r:[.5+86/W,.29],b:[.5,.43]};
   [["peL",c.l],["peR",c.r],["pb",c.b]].forEach(([id,p])=>{ $(id).style.left=p[0]*W+"px"; $(id).style.top=p[1]*H+"px"; }); }
 function camLooksBlocked(){ const vw=video.videoWidth,vh=video.videoHeight; if(!vw) return true;
   bctx.drawImage(video,0,0,vw,vh,0,0,64,48); const d=bctx.getImageData(0,0,64,48).data; let m=0,v=0,n=d.length/4;
   for(let i=0;i<d.length;i+=4) m+=d[i]*.3+d[i+1]*.59+d[i+2]*.11; m/=n;
   for(let i=0;i<d.length;i+=4){ const g=d[i]*.3+d[i+1]*.59+d[i+2]*.11; v+=(g-m)*(g-m); } v/=n;
   return m<18 || v<40; }
+/* calibration: the owl asks to be touched through the holes: left eye, right eye, beak. Each touch places that part. */
 function calibrate(){ return new Promise(done=>{ const P=$("puppet"); P.classList.add("cal");
-  say("Przesuń kółka pod otwory w sowie. Gdy pasują, stuknij dwa razy w dziób.");
-  let drag=null, lastTap=0;
-  const down=e=>{ const t=e.target.closest(".pe,.pb"); if(!t) return; drag=t; t.setPointerCapture?.(e.pointerId);
-    if(t.id==="pb"){ const now=performance.now(); if(now-lastTap<350){ finish(); return; } lastTap=now; } };
-  const move=e=>{ if(!drag) return; drag.style.left=e.clientX+"px"; drag.style.top=e.clientY+"px"; };
-  const up=()=>{ drag=null; };
-  async function finish(){ const f=id=>[parseFloat($(id).style.left)/innerWidth, parseFloat($(id).style.top)/innerHeight];
-    cal={l:f("peL"),r:f("peR"),b:f("pb")}; saveCal();
-    await wait(400);
-    if(camLooksBlocked()){ await say("Kamera jest zasłonięta. Przesuń sowę trochę w bok, żeby kamera wyglądała między uszami."); return; }
-    P.classList.remove("cal"); P.removeEventListener("pointerdown",down); P.removeEventListener("pointermove",move); P.removeEventListener("pointerup",up);
-    done(); }
-  P.addEventListener("pointerdown",down); P.addEventListener("pointermove",move); P.addEventListener("pointerup",up); }); }
+  const parts=[["peL","Dotknij mnie palcem w lewe oko. Przez dziurkę!","Hihi, łaskocze! Teraz prawe oko."],
+               ["peR",null,"Super! A teraz dotknij mój dziób."],
+               ["pb",null,"Mniam! Już cię widzę."]];
+  const pos={}; let i=0;
+  const reset=()=>{ i=0; parts.forEach(([id])=>$(id).classList.add("unset")); $("calStep").textContent="Dotknij palcem przez lewe oko."; say(parts[0][1]); };
+  const down=async e=>{ if(i>=parts.length) return; const W=innerWidth,H=innerHeight, x=e.clientX, y=e.clientY;
+    // ignore a touch too close to a part already placed (double tap on the same hole)
+    if(Object.values(pos).some(([px,py])=>Math.hypot(px*W-x,py*H-y)<60)) return;
+    const [id,,next]=parts[i]; pos[id]=[x/W,y/H]; const el=$(id); el.style.left=x+"px"; el.style.top=y+"px"; el.classList.remove("unset");
+    if(id!=="pb"){ el.classList.add("happy"); setTimeout(()=>el.classList.remove("happy"),700); } else { el.classList.add("talk"); setTimeout(()=>el.classList.remove("talk"),600); }
+    i++; $("calStep").textContent=["","Teraz prawe oko.","Teraz dziób.","Gotowe!"][i];
+    if(i<parts.length){ say(next); return; }
+    cal={l:pos.peL,r:pos.peR,b:pos.pb}; saveCal();
+    await say(next); await wait(200);
+    if(camLooksBlocked()){ await say("Kamera jest zasłonięta. Przesuń sowę trochę w bok, żeby kamera wyglądała między uszami. Potem dotknij znowu lewe oko.");
+      for(const k in pos) delete pos[k]; reset(); return; }
+    P.classList.remove("cal"); P.removeEventListener("pointerdown",down); done(); };
+  P.addEventListener("pointerdown",down); reset(); }); }
 async function enterPuppet(needCal){ facing="user"; wide=false; wideId=null; MIN_CODE=0.05; await startCam();
   $("puppet").hidden=false; placePuppet(); try{ document.documentElement.requestFullscreen?.().catch(()=>{}); }catch(e){}
   if(needCal) await calibrate(); }
@@ -466,6 +495,19 @@ try{ navigator.wakeLock?.request("screen").catch(()=>{}); }catch(e){}
 $("decks").innerHTML=window.DECKS.map(d=>`<button class="chip" data-id="${d.id}" aria-pressed="false">${d.cards[0].e} ${d.pl}</button>`).join("");
 $("decks").addEventListener("click",e=>{const b=e.target.closest("button"); if(b) setDeck(b.dataset.id);});
 setDeck(window.DECKS[0].id);
+/* ---------- install as an app (no browser bar) ---------- */
+const standalone=matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches||navigator.standalone;
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+let installEvt=null, instHidden=false; try{ instHidden=localStorage.getItem("sowa-install-x")==="1"; }catch(e){}
+function showInstall(){ if(!standalone && !instHidden) $("install").hidden=false; }
+addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); installEvt=e; showInstall(); });
+if(isIOS) showInstall();
+$("instBtn").onclick=async()=>{ if(installEvt){ installEvt.prompt(); const r=await installEvt.userChoice; if(r.outcome==="accepted") $("install").hidden=true; installEvt=null; }
+  else $("iosHelp").hidden=false; };
+$("iosOk").onclick=()=>{ $("iosHelp").hidden=true; };
+$("instX").onclick=()=>{ $("install").hidden=true; try{ localStorage.setItem("sowa-install-x","1"); }catch(e){} };
+addEventListener("appinstalled",()=>{ $("install").hidden=true; });
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>

@@ -88,7 +88,7 @@ def page(name, W, H, phones, ph_h):
 <tspan x="12" dy="6.5">3. Przyłóż do telefonu: kamera w wcięciu</tspan><tspan x="16" dy="4">między uszami, dół sowy równo</tspan><tspan x="16" dy="4">z dołem telefonu. Jeśli sowa wystaje,</tspan><tspan x="16" dy="4">przytnij dół po linii −3 albo −6 mm.</tspan>
 <tspan x="12" dy="6.5">4. Kamera w rogu ekranu? Dotnij ucho</tspan><tspan x="16" dy="4">po przerywanej linii.</tspan>
 <tspan x="12" dy="6.5">5. Przytrzymaj gumkami w nacięciach.</tspan>
-<tspan x="12" dy="6.5">6. W grze włącz „Sowa-pacynka”</tspan><tspan x="16" dy="4">i ustaw oczy i dziób pod otwory.</tspan>
+<tspan x="12" dy="6.5">6. W grze stuknij „Ustaw sowę”. Sowa</tspan><tspan x="16" dy="4">poprosi: dotknij palcem przez lewe</tspan><tspan x="16" dy="4">oko, prawe oko, a potem dziób.</tspan>
 <tspan x="12" dy="6.5">7. Postaw telefon i graj.</tspan><tspan x="16" dy="4">Żeby wyjść: przytrzymaj palec</tspan><tspan x="16" dy="4">w oku sowy przez 2 sekundy.</tspan>
 </text>
 </g>
@@ -106,7 +106,7 @@ Jeśli jesteś pomiędzy rozmiarami, wybierz większy i przytnij dół po linii 
 <table style="border-collapse:collapse;font-size:11.5px;width:100%;margin-top:6mm" cellpadding="8">
 <tr style="background:#f3ecdf;text-align:left"><th>Rozmiar</th><th>Telefon w etui</th><th>Przykładowe telefony</th><th>Wydrukuj</th></tr>{rows}</table>
 <p style="font-size:11px;color:#666;margin-top:8mm;line-height:1.5">Szerokość nie musi się zgadzać co do milimetra: sowa może być trochę szersza niż telefon.
-Oczy i dziób w grze ustawiasz raz pod otwory, więc pasują do każdego modelu.</p></div>'''
+Przy pierwszej grze sowa poprosi, żeby dotknąć jej oczu i dzioba przez otwory. Wtedy gra wie, gdzie je pokazać, więc pasuje do każdego modelu.</p></div>'''
 
 
 html = ('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:0}body{margin:0}svg{display:block;break-after:page}</style></head><body>'

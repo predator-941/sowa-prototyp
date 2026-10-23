@@ -15,6 +15,9 @@ Gra dla dzieci: sowa zadaje pytania, dziecko pokazuje wydrukowaną kartę przedn
 Przód karty to duży obrazek, tył to kod QR na środku z ramką do trzymania. Kod ma tekst `S1:<id>`, np. `S1:karetka` (stare `SOWA1:` też działa).
 Id kart są w `tools/decks.py` i muszą być unikalne we wszystkich taliach.
 
+## Jak aplikacja
+`manifest.webmanifest`, `sw.js` i `icons/` pozwalają dodać grę do ekranu początkowego: otwiera się wtedy z ikonki sowy, na całym ekranie, bez paska przeglądarki. Na Androidzie gra pokazuje przycisk „Dodaj”, na iPhonie instrukcję (Udostępnij → Do ekranu początkowego).
+
 ## Uruchomienie
 Kamera działa tylko pod adresem https, więc grę otwiera się ze strony na Netlify, a nie z pliku na dysku.
 Każdy push na gałąź `main` publikuje nową wersję.
