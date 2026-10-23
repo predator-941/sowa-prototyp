@@ -144,6 +144,7 @@ video.mirror{transform:scaleX(-1)}
     <button class="chip" id="again">🔁 Powtórz</button>
     <button class="chip" id="skip">⏭ Dalej</button>
     <button class="chip" id="flip">🔄 Kamera</button>
+    <button class="chip" id="wide" aria-pressed="false">📐 Szeroko</button>
     <button class="chip" id="tap" aria-pressed="false">👆 Bez kamery</button>
     <button class="chip" id="home">🏠</button>
   </div>
@@ -164,6 +165,7 @@ const T = {
  pl:{ask:n=>askFor(n), yes:n=>`Brawo! To ${n}!`, no:(n,t)=>`To ${n}. `+askFor(t), free:"Pokaż mi dowolną kartę!", win:"Super! Pięć gwiazdek! Gramy dalej?", hint:"Pokaż kartę sowie", nocam:"Nie mam dostępu do kamery. Dotykaj obrazków!", hello:"Cześć! Jestem Sowa. Pobawimy się?"},
  en:{ask:n=>askFor(n), yes:n=>`Great job! That's the ${n}!`, no:(n,t)=>`That's the ${n}. `+askFor(t), free:"Show me any card!", win:"Amazing! Five stars! Let's play again!", hint:"Show a card to Owl", nocam:"No camera access. Tap the pictures!", hello:"Hi! I'm Owl. Let's play!"}
 };
+let wide=false, wideId=null;
 let lang="pl", mode="find", target=null, stars=0, busy=false, lastCode="", lastAt=0, facing="user", stream=null, tapMode=false, order=[];
 const $=id=>document.getElementById(id);
 const owlTpl=$("owlTpl").innerHTML; $("owl").innerHTML=owlTpl; $("owlStart").innerHTML=owlTpl;
@@ -274,8 +276,12 @@ async function getEngine(){ if(engine) return engine;
   if(!window.QrScanner) return null;
   try{ engine=await QrScanner.createQrEngine(); }catch(e){ engine=null; } return engine; }
 async function startCam(){ stopCam();
-  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}},audio:false});
-    try{ await stream.getVideoTracks()[0].applyConstraints({advanced:[{focusMode:"continuous"}]}); }catch(e){}
+  try{ const base={width:{ideal:1440},height:{ideal:1080}};            // 4:3 keeps the full sensor height instead of a 16:9 crop
+    const v= wideId ? {...base, deviceId:{exact:wideId}} : {...base, facingMode:facing};
+    stream=await navigator.mediaDevices.getUserMedia({video:v,audio:false});
+    const track=stream.getVideoTracks()[0];
+    try{ await track.applyConstraints({advanced:[{focusMode:"continuous"}]}); }catch(e){}
+    if(wide && !wideId){ try{ const c=track.getCapabilities?.(); if(c && c.zoom && c.zoom.min<1) await track.applyConstraints({advanced:[{zoom:c.zoom.min}]}); }catch(e){} }
     video.srcObject=stream; await video.play(); video.classList.toggle("mirror",facing==="user");
     await getEngine(); scanLoop(++loopId); return true;
   }catch(e){ return false; } }
@@ -286,7 +292,7 @@ function region(pass){ const vw=video.videoWidth, vh=video.videoHeight;
           : {x:vw*.3,y:vh*.25,width:vw*.4,height:vh*.5};   // native-resolution centre: small or far codes
   const ds=Math.min(720,Math.round(r.width)); return {...r, downScaledWidth:ds, downScaledHeight:Math.round(ds*r.height/r.width)}; }
 const cv=$("cv");
-const MIN_CODE=0.06;   // code must span at least 6% of the frame width: a card held up, not one lying far away
+let MIN_CODE=0.06;    // code must span at least 6% of the frame width: a card held up, not one lying far away (lower in wide mode)
 const HINTS={pl:{closer:"Podejdź bliżej, nie widzę!",further:"Ojej, za blisko! Odsuń kartę trochę."},en:{closer:"Come closer, I can't see!",further:"Too close! Move the card back a little."}};
 function hint(kind){ const now=performance.now(); if(busy||talking||tapMode||now-lastHint<5000) return; lastHint=now; say(HINTS[lang][kind]); }
 /* blur check on a tiny centre sample: a card held right against the lens is out of focus and fills the view */
@@ -339,7 +345,15 @@ $("go").onclick=async()=>{ if(mode==="story"&&lang!=="pl"){ lang="pl"; toggle("l
 $("again").onclick=()=>{ if(busy) return; busy=true; ask_repeat(); };
 async function ask_repeat(){ if(mode==="story") await say(STORY.steps[step].ask); else if(mode==="find"&&target) await say(T[lang].ask(vname(target))); else await say(T[lang].free); busy=false; }
 $("skip").onclick=()=>{ if(busy) return; busy=true; if(mode==="story"){ step=(step+1)%STORY.steps.length; drawScore(); } ask(); };
-$("flip").onclick=async()=>{ facing=facing==="user"?"environment":"user"; if(!tapMode) await startCam(); };
+$("flip").onclick=async()=>{ facing=facing==="user"?"environment":"user"; wide=false; wideId=null; MIN_CODE=0.06; $("wide").setAttribute("aria-pressed",false); if(!tapMode) await startCam(); };
+/* wide angle: use the ultra-wide back lens when the browser lists it, otherwise zoom out below 1x if the camera allows */
+$("wide").onclick=async()=>{ wide=!wide; $("wide").setAttribute("aria-pressed",wide); wideId=null; MIN_CODE=wide?0.035:0.06;
+  if(wide){ facing="environment";
+    try{ const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="videoinput");
+         const uw=devs.find(d=>/ultra|0[.,]5|szerok/i.test(d.label)) || devs.find(d=>/wide/i.test(d.label)&&!/front|przed/i.test(d.label)&&!/dual|triple/i.test(d.label));
+         if(uw) wideId=uw.deviceId; }catch(e){} }
+  if(!tapMode) await startCam();
+  if(wide && !wideId){ const c=stream?.getVideoTracks()[0]?.getCapabilities?.(); if(!(c && c.zoom && c.zoom.min<1)) say(lang==="pl"?"Ten telefon nie daje w przeglądarce szerszego kąta. Gram na zwykłej kamerze.":"This phone has no wider lens in the browser. Using the normal camera."); } };
 $("tap").onclick=()=>setTap(!tapMode);
 $("home").onclick=()=>{ stopCam(); speechSynthesis?.cancel(); $("app").hidden=true; $("start").hidden=false; };
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) stopCam(); else if(!$("app").hidden && !tapMode) startCam(); });
