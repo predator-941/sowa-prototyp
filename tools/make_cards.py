@@ -22,7 +22,7 @@ with open(os.path.join(ROOT, "decks.js"), "w") as f:
     f.write("window.DECKS = " + json.dumps(DECKS, ensure_ascii=False, indent=1) + ";\n")
 
 def qr_svg(data):
-    q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=2)
+    q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, border=2)
     q.add_data(data); q.make()
     m = q.get_matrix(); n = len(m)
     rects = "".join(f'<rect x="{x}" y="{y}" width="1.02" height="1.02"/>' for y, row in enumerate(m) for x, v in enumerate(row) if v)
@@ -35,25 +35,42 @@ body{margin:0;font-family:"DejaVu Sans",sans-serif;color:#1d1a4a}
 .card{border:0.3mm dashed #bbb;box-sizing:border-box;padding:4mm;display:flex;flex-direction:column;align-items:center;
   background:linear-gradient(var(--c) 0 46%,#fff 46%);break-inside:avoid;position:relative}
 .tag{position:absolute;top:3mm;left:3.5mm;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1d1a4a;opacity:.7}
-.pic{font-family:"Noto Color Emoji";font-size:84px;line-height:1;margin-top:4mm;height:36mm;display:flex;align-items:center}
-.nm{font-weight:800;font-size:18px;margin-top:3mm;text-align:center;line-height:1.1}
-.en{font-size:11px;color:#6b678f;margin-bottom:2mm}
-.qr{width:31mm;height:31mm;margin-top:auto}.qr svg{width:100%;height:100%;display:block}
+.pic{font-family:"Noto Color Emoji";font-size:72px;line-height:1;margin-top:3mm;height:26mm;display:flex;align-items:center}
+.nm{font-weight:800;font-size:17px;margin-top:1mm;text-align:center;line-height:1.1}
+.en{font-size:10px;color:#6b678f;margin-bottom:1mm}
+.back{background:#fff;justify-content:center;gap:3mm}.back .qr{width:54mm;height:54mm;margin:0}.back .lb{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b678f}
+.page{break-after:page}
+.qr{width:36mm;height:36mm;margin-top:auto}.qr svg{width:100%;height:100%;display:block}
 .info{grid-column:1/-1;padding:6mm 8mm;font-size:13px;line-height:1.5;border:0.3mm dashed #bbb;align-self:start}
 .info h2{margin:0 0 3mm;font-size:20px}
 """
 
-def deck_html(d):
-    cards = "".join(f'''<div class="card" style="--c:{c['c']}"><div class="tag">{d['pl']}</div>
+def front(d, c, pos=""):
+    return f'''<div class="card" style="--c:{c['c']};{pos}"><div class="tag">{d['pl']}</div>
       <div class="pic">{c['e']}</div><div class="nm">{c['pl']}</div><div class="en">{c['en']}</div>
-      <div class="qr">{qr_svg("SOWA1:" + c['id'])}</div></div>''' for c in d["cards"])
+      <div class="qr">{qr_svg("S1:" + c['id'])}</div></div>'''
+
+def back(d, c, pos):
+    return f'''<div class="card back" style="{pos}"><div class="qr">{qr_svg("S1:" + c['id'])}</div>
+      <div class="lb">Sowa · {d['pl']}</div></div>'''
+
+def deck_html(d):
+    cards = d["cards"]; pages = []
+    for k in range(0, len(cards), 9):
+        chunk = cards[k:k+9]
+        fr = "".join(front(d, c, f"grid-row:{i//3+1};grid-column:{i%3+1}") for i, c in enumerate(chunk))
+        # tył: kolumny w lustrzanym odbiciu, żeby przy druku dwustronnym (obrót po dłuższej krawędzi) trafić na przód
+        bk = "".join(back(d, c, f"grid-row:{i//3+1};grid-column:{3-i%3}") for i, c in enumerate(chunk))
+        pages.append(f'<div class="sheet page">{fr}</div><div class="sheet page">{bk}</div>')
     story = d.get("story", {}).get("title")
-    info = f'''<div class="info"><h2>Sowa: {d['pl']} ({len(d['cards'])} kart)</h2>
-      Gry w aplikacji: „Pokaż mi…”, „Co to jest?”{f", przygoda „{story}”" if story else ""}.<br>
-      <b>1.</b> Wydrukuj na grubszym papierze (200–300 g) albo zalaminuj. <b>2.</b> Wytnij po przerywanej linii.
-      <b>3.</b> W grze wybierz talię „{d['pl']}”, postaw telefon przednią kamerą do dziecka.<br>
-      Kod QR musi być widoczny i niezasłonięty palcami. Najlepiej działa przy dobrym świetle, z 20–40 cm.</div>'''
-    return f'<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Sowa {d["pl"]}</title><style>{CSS}</style></head><body><div class="sheet">{cards}{info}</div></body></html>'
+    info = f'''<div class="sheet"><div class="info"><h2>Sowa: {d['pl']} ({len(cards)} kart)</h2>
+      Gry w aplikacji: „Pokaż mi…”, „Co to jest?”{f", przygoda „{story}”" if story else ""}.<br><br>
+      <b>Druk dwustronny (zalecany):</b> co druga strona to tyły kart z dużym kodem. Drukuj dwustronnie, obrót po dłuższej krawędzi.
+      Tył ma duży kod, więc kamera złapie kartę nawet wtedy, gdy dziecko trzyma ją obrazkiem do siebie.<br>
+      <b>Bez druku dwustronnego:</b> wydrukuj tylko strony z przodami. Mniejszy kod na przodzie też działa.<br><br>
+      Najlepiej na grubszym papierze (200–300 g) albo zalaminowane. Wytnij po przerywanej linii.
+      W grze wybierz talię „{d['pl']}”, postaw telefon przednią kamerą do dziecka, przy dobrym świetle.</div></div>'''
+    return f'<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Sowa {d["pl"]}</title><style>{CSS}</style></head><body>{"".join(pages)}{info}</body></html>'
 
 with sync_playwright() as p:
     b = p.chromium.launch(); pg = b.new_page()
