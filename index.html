@@ -38,7 +38,8 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--sky-2),var(--sky) 70%);
 .score .s.on{filter:none;transform:scale(1.15)}
 
 /* camera window */
-.view{flex:1;min-height:0;position:relative;border-radius:28px;overflow:hidden;background:#0f0d2e;border:4px solid var(--sky-2)}
+.view.seen{border-color:var(--leaf)}
+.view{transition:border-color .15s;flex:1;min-height:0;position:relative;border-radius:28px;overflow:hidden;background:#0f0d2e;border:4px solid var(--sky-2)}
 video{width:100%;height:100%;object-fit:cover;display:block}
 video.mirror{transform:scaleX(-1)}
 .frame{position:absolute;inset:8% 10%;border:4px dashed rgba(255,211,92,.85);border-radius:22px;pointer-events:none}
@@ -149,7 +150,7 @@ video.mirror{transform:scaleX(-1)}
 </div>
 <canvas id="cv" hidden></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script type="module">import QrScanner from "./vendor/qr-scanner.min.js"; window.QrScanner=QrScanner; window.dispatchEvent(new Event("qrready"));</script>
 <script src="decks.js"></script>
 <script>
 let deck=window.DECKS[0], V=deck.cards, STORY=deck.story, SILLY=deck.silly||{};
@@ -174,10 +175,12 @@ function pickVoice(){const vs=speechSynthesis.getVoices(); const want=lang==="pl
   voice=vs.find(v=>v.lang.toLowerCase().startsWith(want)&&/female|zosia|ewa|paulina|samantha|google/i.test(v.name))||vs.find(v=>v.lang.toLowerCase().startsWith(want))||null;}
 if("speechSynthesis" in window){speechSynthesis.onvoiceschanged=pickVoice; pickVoice();}
 function say(text){ $("bubble").textContent=text;
-  return new Promise(res=>{ if(!("speechSynthesis" in window)) return setTimeout(res,1200);
-    speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang=lang==="pl"?"pl-PL":"en-US";
-    if(voice)u.voice=voice; u.rate=.95; u.pitch=1.25; let done=false; const fin=()=>{if(!done){done=true;res();}};
-    u.onend=fin; u.onerror=fin; setTimeout(fin, 900+text.length*90); speechSynthesis.speak(u); });}
+  return new Promise(res=>{ if(!("speechSynthesis" in window)||!text) return setTimeout(res,text?1200:0);
+    const ss=speechSynthesis; if(ss.speaking||ss.pending) ss.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang=lang==="pl"?"pl-PL":"en-US";
+    if(voice)u.voice=voice; u.rate=1; u.pitch=1.25; let done=false; const fin=()=>{if(!done){done=true;res();}};
+    u.onend=fin; u.onerror=fin; setTimeout(fin, 1200+text.length*60);   // iOS sometimes never fires onend
+    setTimeout(()=>{ ss.resume(); ss.speak(u); },60); });}               // short gap after cancel avoids a dropped utterance on iOS
 
 /* ---------- sounds (synthesized, no files) ---------- */
 let ac=null; const actx=()=>ac||(ac=new (window.AudioContext||window.webkitAudioContext)());
@@ -210,12 +213,14 @@ function drawScore(){const n=mode==="story"?STORY.steps.length:5, k=mode==="stor
 /* ---------- game flow ---------- */
 function nextTarget(){ if(!order.length) order=[...V].sort(()=>Math.random()-.5);
   let n=order.pop(); if(target&&n.id===target.id&&order.length) n=order.pop(); return n;}
-async function ask(){ mood("think"); if(mode==="story"){ target=byId[[].concat(STORY.steps[step].ans)[0]]; misses=0; await say(STORY.steps[step].ask); }
-  else if(mode==="find"){ target=nextTarget(); await say(T[lang].ask(vname(target))); }
-  else { target=null; await say(T[lang].free); } mood(null); busy=false; }
+async function ask(){ mood("think"); let q;
+  if(mode==="story"){ target=byId[[].concat(STORY.steps[step].ans)[0]]; misses=0; q=STORY.steps[step].ask; }
+  else if(mode==="find"){ target=nextTarget(); q=T[lang].ask(vname(target)); }
+  else { target=null; q=T[lang].free; }
+  busy=false; await say(q); mood(null); }
 
 async function onCard(id){
-  const v=byId[id]; if(!v||busy) return; busy=true;
+  const v=byId[id]; if(!v||busy) return; busy=true; try{ speechSynthesis.cancel(); }catch(e){}
   if(mode==="story"){ const st=STORY.steps[step];
     if([].concat(st.ans).includes(v.id)){ flash(v.e,"good"); mood("happy"); SND.good(); step++; drawScore(); SND[v.snd]?.(); await say(st.after); await wait(600);
       if(step>=STORY.steps.length){ mood("happy"); SND.good(); await say(STORY.end); step=0; drawScore(); mood(null); busy=false; return; }
@@ -234,33 +239,38 @@ async function onCard(id){
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- camera + QR ---------- */
-const video=$("video"), cv=$("cv"), ctx=cv.getContext("2d",{willReadFrequently:true});
-let detector=null;
+const video=$("video");
+let engine=null, loopId=0;
+async function getEngine(){ if(engine) return engine;
+  if(!window.QrScanner) await new Promise(r=>{ window.addEventListener("qrready",r,{once:true}); setTimeout(r,4000); });
+  if(!window.QrScanner) return null;
+  try{ engine=await QrScanner.createQrEngine(); }catch(e){ engine=null; } return engine; }
 async function startCam(){ stopCam();
-  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1920},height:{ideal:1080}},audio:false});
+  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}},audio:false});
     try{ await stream.getVideoTracks()[0].applyConstraints({advanced:[{focusMode:"continuous"}]}); }catch(e){}
     video.srcObject=stream; await video.play(); video.classList.toggle("mirror",facing==="user");
-    if("BarcodeDetector" in window){ try{ const f=await BarcodeDetector.getSupportedFormats(); if(f.includes("qr_code")) detector=new BarcodeDetector({formats:["qr_code"]}); }catch(e){} }
-    requestAnimationFrame(scan); return true;
+    await getEngine(); scanLoop(++loopId); return true;
   }catch(e){ return false; } }
-function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
-/* jsQR fallback: alternate a full-frame pass and a zoomed centre pass, so small or distant cards are still caught */
-function scanJsQR(){ const vw=video.videoWidth, vh=video.videoHeight; if(!vw) return null;
-  pass=(pass+1)%3; let sx=0, sy=0, sw=vw, sh=vh;
-  if(pass===1){ sw=vw*.6; sh=vh*.6; sx=(vw-sw)/2; sy=(vh-sh)/2; }          // centre, ~1.7x zoom
-  if(pass===2){ sw=vw*.5; sh=vh*.7; sx=(vw-sw)/2; sy=vh*.3; }              // lower half, where kids hold cards
-  const w=Math.min(960,Math.round(sw)), h=Math.round(w*sh/sw); cv.width=w; cv.height=h;
-  ctx.drawImage(video,sx,sy,sw,sh,0,0,w,h);
-  const r=jsQR(ctx.getImageData(0,0,w,h).data,w,h,{inversionAttempts:"dontInvert"}); return r?r.data:null; }
-let lastScan=0, pass=0, scanning=false;
-async function scan(t){ if(!stream) return; requestAnimationFrame(scan);
-  if(scanning || t-lastScan<110 || video.readyState<2 || tapMode) return; lastScan=t; scanning=true;
-  let code=null;
-  try{ if(detector){ const r=await detector.detect(video); if(r[0]) code=r[0].rawValue; }
-       else if(window.jsQR){ code=scanJsQR(); } }catch(e){}
-  scanning=false;
-  if(code){ const id=code.replace(/^(SOWA1|S1):/i,"").trim().toLowerCase(); const now=performance.now();
-    if(id===lastCode && now-lastAt<2500) return; lastCode=id; lastAt=now; onCard(id); } }
+function stopCam(){ loopId++; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
+/* regions: whole frame, then a ~1.7x zoom on the centre, then the lower half where small hands hold cards */
+function region(pass){ const vw=video.videoWidth, vh=video.videoHeight;
+  const r = pass===0 ? {x:0,y:0,width:vw,height:vh}
+          : pass===1 ? {x:vw*.2,y:vh*.2,width:vw*.6,height:vh*.6}
+          :            {x:vw*.2,y:vh*.35,width:vw*.6,height:vh*.65};
+  const ds=Math.min(720,Math.round(r.width)); return {...r, downScaledWidth:ds, downScaledHeight:Math.round(ds*r.height/r.width)}; }
+const cv=$("cv");
+async function scanLoop(id){ let pass=0;
+  while(id===loopId && stream){
+    if(!tapMode && video.readyState>=2 && video.videoWidth && engine){
+      try{ const r=await QrScanner.scanImage(video,{qrEngine:engine,canvas:cv,scanRegion:region(pass),returnDetailedScanResult:true});
+           if(r && r.data) gotCode(r.data); }catch(e){ /* no code in this frame */ }
+      pass=(pass+1)%3;
+    }
+    await wait(70);
+  } }
+function gotCode(code){ const cid=code.replace(/^(SOWA1|S1):/i,"").trim().toLowerCase(); if(!byId[cid]) return;
+  const now=performance.now(); $("view").classList.add("seen"); setTimeout(()=>$("view").classList.remove("seen"),250);
+  if(cid===lastCode && now-lastAt<1500) return; lastCode=cid; lastAt=now; onCard(cid); }
 
 /* ---------- tap fallback ---------- */
 function renderGrid(){ $("grid").innerHTML=V.map(v=>`<button data-id="${v.id}" aria-label="${v.pl}">${v.e}<span>${v[lang]}</span></button>`).join(""); }
