@@ -183,7 +183,13 @@ function say(text){ $("bubble").textContent=text;
     setTimeout(()=>{ ss.resume(); ss.speak(u); },60); });}               // short gap after cancel avoids a dropped utterance on iOS
 
 /* ---------- sounds (synthesized, no files) ---------- */
-let ac=null; const actx=()=>ac||(ac=new (window.AudioContext||window.webkitAudioContext)());
+let ac=null;
+function actx(){ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)();
+  if(ac.state!=="running"){ try{ ac.resume(); }catch(e){} } return ac; }
+/* iPhone mutes Web Audio when the ring/silent switch is on; ask for "playback" so game sounds play like a video does */
+function unlockAudio(){ try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  try{ const a=new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="); a.setAttribute("playsinline",""); a.play().catch(()=>{}); }catch(e){}
+  const c=actx(); try{ const o=c.createOscillator(), g=c.createGain(); g.gain.value=0; o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+.05); }catch(e){} }
 function tone(f,dur,type="sine",vol=.18,when=0,slideTo){const c=actx(),o=c.createOscillator(),g=c.createGain(),t=c.currentTime+when;
   o.type=type;o.frequency.setValueAtTime(f,t); if(slideTo)o.frequency.linearRampToValueAtTime(slideTo,t+dur);
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.02);g.gain.linearRampToValueAtTime(0,t+dur);
@@ -306,7 +312,7 @@ function toggle(a,b,on){$(a).setAttribute("aria-pressed",on);$(b).setAttribute("
 function setMode(m){mode=m;["mFind","mFree","mStory"].forEach(id=>$(id).setAttribute("aria-pressed",id==={find:"mFind",free:"mFree",story:"mStory"}[m]));}
 $("mFind").onclick=()=>setMode("find"); $("mFree").onclick=()=>setMode("free"); $("mStory").onclick=()=>setMode("story");
 $("lPl").onclick=()=>{lang="pl";toggle("lPl","lEn",true);pickVoice()}; $("lEn").onclick=()=>{lang="en";toggle("lPl","lEn",false);pickVoice()};
-$("go").onclick=async()=>{ if(mode==="story"&&lang!=="pl"){ lang="pl"; toggle("lPl","lEn",true); pickVoice(); } actx().resume(); say(""); $("start").hidden=true; $("app").hidden=false; stars=0; step=0; drawScore();
+$("go").onclick=async()=>{ if(mode==="story"&&lang!=="pl"){ lang="pl"; toggle("lPl","lEn",true); pickVoice(); } unlockAudio(); say(""); $("start").hidden=true; $("app").hidden=false; stars=0; step=0; drawScore();
   $("hint").textContent=T[lang].hint; busy=true;
   const ok=navigator.mediaDevices?.getUserMedia ? await startCam() : false;
   if(!ok){ setTap(true); await say(T[lang].nocam); } else setTap(false);
