@@ -135,6 +135,7 @@ video.mirror{transform:scaleX(-1)}
   <div class="score" id="score" aria-label="Gwiazdki"></div>
   <div class="view" id="view">
     <video id="video" playsinline muted autoplay class="mirror"></video>
+    <canvas id="ov" hidden style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
     <div class="frame" id="frame"></div>
     <div class="hint" id="hint">Pokaż kartę sowie</div>
     <div class="grid" id="grid" hidden></div>
@@ -145,6 +146,7 @@ video.mirror{transform:scaleX(-1)}
     <button class="chip" id="skip">⏭ Dalej</button>
     <button class="chip" id="flip">🔄 Kamera</button>
     <button class="chip" id="wide" aria-pressed="false">📐 Szeroko</button>
+    <button class="chip" id="dbg" aria-pressed="false">👁 Podgląd</button>
     <button class="chip" id="tap" aria-pressed="false">👆 Bez kamery</button>
     <button class="chip" id="home">🏠</button>
   </div>
@@ -286,11 +288,12 @@ async function startCam(){ stopCam();
     await getEngine(); scanLoop(++loopId); return true;
   }catch(e){ return false; } }
 function stopCam(){ loopId++; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
-/* regions: whole frame, then a ~1.7x zoom on the centre. No separate bottom pass: it picked up cards lying on the table or floor */
-function region(pass){ const vw=video.videoWidth, vh=video.videoHeight;
-  const r = pass===0 ? {x:0,y:0,width:vw,height:vh} : pass===1 ? {x:vw*.2,y:vh*.2,width:vw*.6,height:vh*.6}
-          : {x:vw*.3,y:vh*.25,width:vw*.4,height:vh*.5};   // native-resolution centre: small or far codes
-  const ds=Math.min(720,Math.round(r.width)); return {...r, downScaledWidth:ds, downScaledHeight:Math.round(ds*r.height/r.width)}; }
+/* regions: whole frame (higher res), upper part of the frame (cards held up high), native-resolution centre (far cards).
+   Cards lying on the table are filtered by size in gotCode, not by region. */
+const PASSES=[[0,0,1,1],[0,0,1,.6],[.3,.25,.4,.5]];
+function region(pass){ const vw=video.videoWidth, vh=video.videoHeight, q=PASSES[pass];
+  const r={x:vw*q[0],y:vh*q[1],width:vw*q[2],height:vh*q[3]};
+  const ds=Math.min(960,Math.round(r.width)); return {...r, downScaledWidth:ds, downScaledHeight:Math.round(ds*r.height/r.width)}; }
 const cv=$("cv");
 let MIN_CODE=0.06;    // code must span at least 6% of the frame width: a card held up, not one lying far away (lower in wide mode)
 const HINTS={pl:{closer:"Podejdź bliżej, nie widzę!",further:"Ojej, za blisko! Odsuń kartę trochę."},en:{closer:"Come closer, I can't see!",further:"Too close! Move the card back a little."}};
@@ -306,6 +309,26 @@ function blurCheck(){ const now=performance.now(); if(now-lastBlurCheck<300) ret
   const sharp=sum/n; if(!sharpBase) sharpBase=sharp;
   if(sharp < sharpBase*0.15){ if(!blurSince) blurSince=now; else if(now-blurSince>1200){ hint("further"); blurSince=0; } }
   else { blurSince=0; sharpBase=sharpBase*0.95+sharp*0.05; } }
+/* preview mode: whole camera frame (not cropped), scan areas, and every code the camera reads, with its size */
+let debug=false, lastSeen=null; const ov=$("ov"), octx=ov.getContext("2d");
+function drawDebug(){ if(!debug) return; requestAnimationFrame(drawDebug);
+  const W=ov.clientWidth, H=ov.clientHeight, vw=video.videoWidth, vh=video.videoHeight; if(!vw) return;
+  if(ov.width!==W*devicePixelRatio){ ov.width=W*devicePixelRatio; ov.height=H*devicePixelRatio; }
+  const k=Math.min(W/vw,H/vh), ox=(W-vw*k)/2, oy=(H-vh*k)/2, mir=video.classList.contains("mirror");
+  const X=x=>{ const px=ox+x*k; return mir? W-px : px; }, Y=y=>oy+y*k;
+  octx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); octx.clearRect(0,0,W,H);
+  octx.lineWidth=1; octx.setLineDash([4,4]); octx.strokeStyle="rgba(255,211,92,.6)";
+  PASSES.forEach(q=>{ const x1=X(vw*q[0]), x2=X(vw*(q[0]+q[2])); octx.strokeRect(Math.min(x1,x2),Y(vh*q[1]),Math.abs(x2-x1),vh*q[3]*k); });
+  octx.setLineDash([]);
+  if(lastSeen && performance.now()-lastSeen.t<800 && lastSeen.pts.length){
+    octx.lineWidth=3; octx.strokeStyle=lastSeen.ok?"#5fd39a":"#ff9f43"; octx.beginPath();
+    lastSeen.pts.forEach((p,i)=>i?octx.lineTo(X(p.x),Y(p.y)):octx.moveTo(X(p.x),Y(p.y))); octx.closePath(); octx.stroke();
+    octx.fillStyle=octx.strokeStyle; octx.font="bold 13px Nunito, sans-serif";
+    octx.fillText(`${lastSeen.id} · ${lastSeen.pct}% ${lastSeen.ok?"OK":"za mała"}`, X(lastSeen.pts[0].x), Y(lastSeen.pts[0].y)-8); }
+  octx.fillStyle="rgba(0,0,0,.55)"; octx.fillRect(8,8,190,22); octx.fillStyle="#fff"; octx.font="12px Nunito, sans-serif";
+  octx.fillText(`${vw}×${vh} · próg ${Math.round(MIN_CODE*1000)/10}%${wide?" · szeroko":""}`,14,23); }
+$("dbg").onclick=()=>{ debug=!debug; $("dbg").setAttribute("aria-pressed",debug); ov.hidden=!debug;
+  video.style.objectFit=debug?"contain":""; $("frame").hidden=debug||tapMode; $("hint").hidden=debug||tapMode; if(debug) drawDebug(); };
 async function scanLoop(id){ let pass=0;
   while(id===loopId && stream){
     if(!tapMode && video.readyState>=2 && video.videoWidth){ try{ blurCheck(); }catch(e){} }
@@ -318,7 +341,9 @@ async function scanLoop(id){ let pass=0;
   } }
 function gotCode(r){ const cid=r.data.replace(/^(SOWA1|S1):/i,"").trim().toLowerCase(); if(!byId[cid]) return;
   const xs=(r.cornerPoints||[]).map(p=>p.x); const w=xs.length? Math.max(...xs)-Math.min(...xs) : video.videoWidth;
-  if(w < video.videoWidth*MIN_CODE){                              // too small: lying in the background, or held too far away
+  const small = w < video.videoWidth*MIN_CODE;
+  lastSeen={pts:r.cornerPoints||[], ok:!small, id:cid, pct:Math.round(w/video.videoWidth*1000)/10, t:performance.now()};
+  if(small){                              // too small: lying in the background, or held too far away
     const cx=xs.reduce((a,b)=>a+b,0)/xs.length/video.videoWidth;
     if(w > video.videoWidth*0.03 && cx>0.25 && cx<0.75) hint("closer");  // centred and not tiny = a child holding it too far
     return; }
