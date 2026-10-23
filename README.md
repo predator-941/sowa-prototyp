@@ -4,12 +4,14 @@ Gra dla dzieci: sowa zadaje pytania, dziecko pokazuje wydrukowaną kartę przedn
 
 ## Pliki
 - `index.html`: cała gra (jeden plik, bez budowania). Tryby: „Pokaż mi…”, „Co to jest?”, „Przygoda” (Zosia jedzie do babci). Tryb „Bez kamery” pozwala dotykać obrazków.
-- `karty.pdf`: 10 kart pojazdów z kodami QR do druku (A4).
-- `tools/make_cards.py`: generuje `karty.pdf` (wymaga `pip install qrcode playwright`).
+- `decks.js`: dane wszystkich talii dla gry (generowane, nie edytuj ręcznie).
+- `karty/`: PDF-y do druku, po jednym na talię (Pojazdy, Zwierzęta, Warzywa i owoce, Wieczór, Emocje).
+- `tools/decks.py`: **tu dodajesz i edytujesz talie**: karty, ciekawostki, przygody, śmieszne odpowiedzi.
+- `tools/make_cards.py`: z `decks.py` generuje `decks.js` i PDF-y (wymaga `pip install qrcode playwright`).
 
 ## Kody kart
 Każda karta ma kod QR z tekstem `SOWA1:<id>`, np. `SOWA1:karetka`.
-Id pojazdów: karetka, straz, policja, autobus, traktor, pociag, samolot, helikopter, statek, rakieta.
+Id kart są w `tools/decks.py` i muszą być unikalne we wszystkich taliach.
 
 ## Uruchomienie
 Kamera działa tylko pod adresem https, więc grę otwiera się ze strony na Netlify, a nie z pliku na dysku.

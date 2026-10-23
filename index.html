@@ -110,8 +110,9 @@ video.mirror{transform:scaleX(-1)}
 
 <div class="start" id="start">
   <div class="owl" id="owlStart"></div>
-  <h1>Sowa i pojazdy</h1>
+  <h1>Gra z Sową</h1>
   <p>Sowa pyta, a Ty pokazujesz kartę do kamery.</p>
+  <div class="modes" id="decks" role="group" aria-label="Talia"></div>
   <div class="modes" role="group" aria-label="Tryb gry">
     <button class="chip" id="mFind" aria-pressed="true">Pokaż mi…</button>
     <button class="chip" id="mFree" aria-pressed="false">Co to jest?</button>
@@ -122,7 +123,7 @@ video.mirror{transform:scaleX(-1)}
     <button class="chip" id="lEn" aria-pressed="false">English</button>
   </div>
   <button class="big" id="go">Zaczynamy!</button>
-  <p class="note">Telefon postaw na stole, tak żeby przednia kamera widziała dziecko. Karty wydrukuj z pliku „karty”.</p>
+  <p class="note">Telefon postaw na stole, tak żeby przednia kamera widziała dziecko. Karty wydrukujesz z folderu „karty”.</p>
 </div>
 
 <div class="app" id="app" hidden>
@@ -149,51 +150,18 @@ video.mirror{transform:scaleX(-1)}
 <canvas id="cv" hidden></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="decks.js"></script>
 <script>
-const V = [
- {id:"karetka", e:"🚑", pl:"karetka", en:"ambulance", fpl:"Karetka wiezie chorych do szpitala. I-o, i-o!", fen:"An ambulance takes sick people to the hospital.", snd:"siren"},
- {id:"straz", e:"🚒", pl:"wóz strażacki", en:"fire truck", fpl:"Strażacy gaszą pożary wodą z węża!", fen:"Firefighters put out fires with water.", snd:"siren"},
- {id:"policja", e:"🚓", pl:"radiowóz", en:"police car", fpl:"Policjanci pilnują, żeby wszyscy byli bezpieczni.", fen:"The police keep everyone safe.", snd:"police"},
- {id:"autobus", e:"🚌", pl:"autobus", en:"bus", fpl:"Autobusem jedzie dużo ludzi naraz. Bip, bip!", fen:"A bus carries lots of people. Beep beep!", snd:"horn"},
- {id:"traktor", e:"🚜", pl:"traktor", en:"tractor", fpl:"Traktor pracuje na polu u rolnika. Brum, brum!", fen:"A tractor works on the farm.", snd:"engine"},
- {id:"pociag", e:"🚂", pl:"pociąg", en:"train", fpl:"Pociąg jedzie po torach. Ciuch, ciuch!", fen:"A train runs on tracks. Choo choo!", snd:"whistle"},
- {id:"samolot", e:"✈️", pl:"samolot", en:"airplane", fpl:"Samolot lata wysoko, nad chmurami.", fen:"An airplane flies high above the clouds.", snd:"whoosh"},
- {id:"helikopter", e:"🚁", pl:"helikopter", en:"helicopter", fpl:"Helikopter ma wielkie śmigło na górze.", fen:"A helicopter has a big rotor on top.", snd:"chopper"},
- {id:"statek", e:"🚢", pl:"statek", en:"ship", fpl:"Statek pływa po morzu. Tuuut!", fen:"A ship sails on the sea. Toot!", snd:"ship"},
- {id:"rakieta", e:"🚀", pl:"rakieta", en:"rocket", fpl:"Rakieta leci aż do kosmosu! Trzy, dwa, jeden, start!", fen:"A rocket flies to space! Three, two, one, lift off!", snd:"whoosh"}
-];
-const byId = Object.fromEntries(V.map(v=>[v.id,v]));
-
-/* ---------- story: Zosia jedzie do babci ---------- */
-const STORY = {
- intro:"Posłuchaj! Zosia jedzie dziś do babci, która mieszka na wyspie nad morzem. Pomożesz jej tam dojechać?",
- steps:[
-  {ans:"autobus", ask:"Najpierw trzeba dojechać na dworzec. Czym Zosia pojedzie przez miasto? Takim dużym, z wieloma ludźmi w środku…", hint:"To jest duże, jeździ po mieście i ma dużo okien.", after:"Brawo! Zosia wsiada do autobusu. Bip, bip! Jedziemy na dworzec."},
-  {ans:"pociag", ask:"Jesteśmy na dworcu! Tu czeka coś bardzo długiego, co jeździ po torach. Co to?", hint:"Jeździ po torach i robi ciuch, ciuch.", after:"Tak! Zosia wsiada do pociągu. Ciuch, ciuch, jedziemy przez pola!"},
-  {ans:"traktor", ask:"Zosia patrzy przez okno. Na polu pracuje rolnik. Czym on jeździ po polu?", hint:"Ma wielkie koła i jeździ po polu.", after:"Zgadza się! Rolnik macha do Zosi z traktora. Brum, brum!"},
-  {ans:"karetka", ask:"Ojej! Na peronie pan przewrócił się i boli go noga. Kogo trzeba wezwać, żeby pomóc panu?", hint:"Wiezie chorych do szpitala i robi i-o, i-o.", after:"Bardzo dobrze! Karetka już jedzie. Pan będzie zdrowy. Uff!"},
-  {ans:"statek", ask:"Babcia mieszka na wyspie. Trzeba przepłynąć przez morze! Czym Zosia popłynie?", hint:"Pływa po wodzie i robi tuuut!", after:"Tak! Zosia płynie wielkim statkiem. Tuuut! Fale robią chlup, chlup."},
-  {ans:"helikopter", ask:"Wyspa już blisko! Nad wyspą lata coś, co ma wielkie śmigło na górze. Co to?", hint:"Ma śmigło na górze i umie latać w miejscu.", after:"Brawo! Helikopter wita Zosię na wyspie. Babcia już macha z brzegu!"},
-  {ans:"rakieta", ask:"Wieczorem Zosia i babcia patrzą w gwiazdy. Coś leci wysoko, wysoko, aż do kosmosu! Co to?", hint:"Leci do kosmosu! Trzy, dwa, jeden, start!", after:"Tak! To rakieta. Leci do gwiazd."}
- ],
- end:"Zosia przytula babcię. Dziękuje, że jej pomogłeś! To była wspaniała podróż. Dobranoc!"
-};
-const SILLY = {
- karetka:"Karetką? Przecież teraz nikt nie jest chory!",
- straz:"Wozem strażackim? Nigdzie się nie pali!",
- policja:"Radiowozem? Policjanci mają teraz ważną pracę!",
- autobus:"Autobusem? Hmm, nie tym razem!",
- traktor:"Traktorem? Jechalibyśmy bardzo, bardzo długo!",
- pociag:"Pociągiem? Tutaj nie ma torów!",
- samolot:"Samolotem? Hmm, nie tym razem!",
- helikopter:"Helikopterem? Hmm, nie tym razem!",
- statek:"Statkiem? Hmm, nie tym razem!",
- rakieta:"Rakietą? Wylądowalibyśmy na Księżycu!"
-};
+let deck=window.DECKS[0], V=deck.cards, STORY=deck.story, SILLY=deck.silly||{};
+const byId=Object.fromEntries(window.DECKS.flatMap(d=>d.cards).map(c=>[c.id,c]));
+const askFor=n=>(lang==="pl"?deck.askPl:deck.askEn).replace("{n}",n);
+function setDeck(id){ deck=window.DECKS.find(d=>d.id===id)||window.DECKS[0]; V=deck.cards; STORY=deck.story; SILLY=deck.silly||{}; order=[]; target=null; renderGrid();
+  $("mStory").hidden=!STORY; if(!STORY&&mode==="story") setMode("find");
+  document.querySelectorAll("#decks .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.id===deck.id)); }
 let step=0, misses=0;
 const T = {
- pl:{ask:n=>`Gdzie jest ${n}?`, yes:n=>`Brawo! To ${n}!`, no:(n,t)=>`To ${n}. A gdzie jest ${t}?`, free:"Pokaż mi dowolną kartę!", win:"Super! Pięć gwiazdek! Gramy dalej?", hint:"Pokaż kartę w ramce", nocam:"Nie mam dostępu do kamery. Dotykaj obrazków!", hello:"Cześć! Jestem Sowa. Pobawimy się?"},
- en:{ask:n=>`Where is the ${n}?`, yes:n=>`Great job! That's the ${n}!`, no:(n,t)=>`That's the ${n}. Where is the ${t}?`, free:"Show me any card!", win:"Amazing! Five stars! Let's play again!", hint:"Show a card in the frame", nocam:"No camera access. Tap the pictures!", hello:"Hi! I'm Owl. Let's play!"}
+ pl:{ask:n=>askFor(n), yes:n=>`Brawo! To ${n}!`, no:(n,t)=>`To ${n}. `+askFor(t), free:"Pokaż mi dowolną kartę!", win:"Super! Pięć gwiazdek! Gramy dalej?", hint:"Pokaż kartę w ramce", nocam:"Nie mam dostępu do kamery. Dotykaj obrazków!", hello:"Cześć! Jestem Sowa. Pobawimy się?"},
+ en:{ask:n=>askFor(n), yes:n=>`Great job! That's the ${n}!`, no:(n,t)=>`That's the ${n}. `+askFor(t), free:"Show me any card!", win:"Amazing! Five stars! Let's play again!", hint:"Show a card in the frame", nocam:"No camera access. Tap the pictures!", hello:"Hi! I'm Owl. Let's play!"}
 };
 let lang="pl", mode="find", target=null, stars=0, busy=false, lastCode="", lastAt=0, facing="user", stream=null, tapMode=false, order=[];
 const $=id=>document.getElementById(id);
@@ -242,21 +210,21 @@ function drawScore(){const n=mode==="story"?STORY.steps.length:5, k=mode==="stor
 /* ---------- game flow ---------- */
 function nextTarget(){ if(!order.length) order=[...V].sort(()=>Math.random()-.5);
   let n=order.pop(); if(target&&n.id===target.id&&order.length) n=order.pop(); return n;}
-async function ask(){ mood("think"); if(mode==="story"){ target=byId[STORY.steps[step].ans]; misses=0; await say(STORY.steps[step].ask); }
+async function ask(){ mood("think"); if(mode==="story"){ target=byId[[].concat(STORY.steps[step].ans)[0]]; misses=0; await say(STORY.steps[step].ask); }
   else if(mode==="find"){ target=nextTarget(); await say(T[lang].ask(vname(target))); }
   else { target=null; await say(T[lang].free); } mood(null); busy=false; }
 
 async function onCard(id){
   const v=byId[id]; if(!v||busy) return; busy=true;
   if(mode==="story"){ const st=STORY.steps[step];
-    if(v.id===st.ans){ flash(v.e,"good"); mood("happy"); SND.good(); step++; drawScore(); SND[v.snd]?.(); await say(st.after); await wait(600);
+    if([].concat(st.ans).includes(v.id)){ flash(v.e,"good"); mood("happy"); SND.good(); step++; drawScore(); SND[v.snd]?.(); await say(st.after); await wait(600);
       if(step>=STORY.steps.length){ mood("happy"); SND.good(); await say(STORY.end); step=0; drawScore(); mood(null); busy=false; return; }
       ask();
     } else { flash(v.e,"bad"); mood("bad"); SND.bad(); misses++;
-      await say((SILLY[v.id]||"Hmm, nie tym razem!")+" "+(misses>=2?"Podpowiem: "+st.hint:"Spróbuj jeszcze raz!")); mood(null); busy=false; }
+      await say((SILLY[v.id]||SILLY.default||"Hmm, nie tym razem!")+" "+(misses>=2?"Podpowiem: "+st.hint:"Spróbuj jeszcze raz!")); mood(null); busy=false; }
     return; }
   if(mode==="free"){ flash(v.e,"good"); mood("happy"); SND[v.snd]?.(); await wait(900);
-    await say(vname(v)[0].toUpperCase()+vname(v).slice(1)+"! "+(lang==="pl"?v.fpl:v.fen)); busy=false; mood(null); return; }
+    await say(vname(v)[0].toUpperCase()+vname(v).slice(1)+"! "+(lang==="pl"?v.fpl:(v.fen||v.fpl))); busy=false; mood(null); return; }
   if(v.id===target.id){ flash(v.e,"good"); mood("happy"); SND.good(); stars++; drawScore();
     await say(T[lang].yes(vname(v))); SND[v.snd]?.(); await wait(1300);
     if(stars>=5){ await say(T[lang].win); stars=0; drawScore(); await wait(400); }
@@ -286,7 +254,7 @@ async function scan(t){ if(!stream) return; requestAnimationFrame(scan);
     if(id===lastCode && now-lastAt<2500) return; lastCode=id; lastAt=now; onCard(id); } }
 
 /* ---------- tap fallback ---------- */
-$("grid").innerHTML=V.map(v=>`<button data-id="${v.id}" aria-label="${v.pl}">${v.e}<span>${v.pl}</span></button>`).join("");
+function renderGrid(){ $("grid").innerHTML=V.map(v=>`<button data-id="${v.id}" aria-label="${v.pl}">${v.e}<span>${v[lang]}</span></button>`).join(""); }
 $("grid").addEventListener("click",e=>{const b=e.target.closest("button");if(b)onCard(b.dataset.id);});
 function setTap(on){ tapMode=on; $("tap").setAttribute("aria-pressed",on); $("grid").hidden=!on; $("frame").hidden=on; $("hint").hidden=on;
   $("grid").querySelectorAll("span").forEach((s,i)=>s.textContent=V[i][lang]); }
@@ -309,6 +277,9 @@ $("tap").onclick=()=>setTap(!tapMode);
 $("home").onclick=()=>{ stopCam(); speechSynthesis?.cancel(); $("app").hidden=true; $("start").hidden=false; };
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) stopCam(); else if(!$("app").hidden && !tapMode) startCam(); });
 try{ navigator.wakeLock?.request("screen").catch(()=>{}); }catch(e){}
+$("decks").innerHTML=window.DECKS.map(d=>`<button class="chip" data-id="${d.id}" aria-pressed="false">${d.cards[0].e} ${d.pl}</button>`).join("");
+$("decks").addEventListener("click",e=>{const b=e.target.closest("button"); if(b) setDeck(b.dataset.id);});
+setDeck(window.DECKS[0].id);
 </script>
 </body>
 </html>
