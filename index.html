@@ -88,6 +88,26 @@ video.mirror{transform:scaleX(-1)}
 @keyframes flapL{50%{transform:rotate(35deg)}} @keyframes flapR{50%{transform:rotate(-35deg)}}
 @keyframes blink{0%,94%,100%{transform:scaleY(0)}97%{transform:scaleY(1)}}
 @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+/* puppet mode: black screen, only eyes and beak show through holes in the cardboard owl */
+#puppet{position:fixed;inset:0;background:#000;z-index:20;touch-action:none;--er:132px;--bw:112px}
+.pe{position:absolute;width:var(--er);height:var(--er);margin:calc(var(--er)/-2) 0 0 calc(var(--er)/-2);border-radius:50%;background:#FFF8E6;overflow:hidden}
+.pupil{position:absolute;left:27%;top:29%;width:46%;height:46%;border-radius:50%;background:#1d1a4a;transition:transform .25s}
+.pupil::after{content:"";position:absolute;width:32%;height:32%;left:56%;top:16%;border-radius:50%;background:#fff}
+.lid{position:absolute;left:-5%;right:-5%;top:0;height:110%;background:#8A5A3C;transform:translateY(-100%);transition:transform .07s}
+.cheek{position:absolute;left:-15%;right:-15%;top:58%;height:90%;border-radius:50%;background:#8A5A3C;transform:translateY(100%);transition:transform .2s}
+.pe.blink .lid{transform:translateY(0)}
+.pe.happy .cheek{transform:translateY(0)} .pe.happy .pupil{transform:translateY(-12%)}
+.pe.bad .pupil{transform:scale(.55)} .pe.bad{animation:shake .4s}
+.pe.look-l .pupil{transform:translateX(-22%)} .pe.look-r .pupil{transform:translateX(22%)}
+.pb{position:absolute;width:var(--bw);height:var(--bw);margin:calc(var(--bw)/-2) 0 0 calc(var(--bw)/-2);background:#5a1e14;border-radius:30%}
+.pb .bu{position:absolute;left:0;top:0;width:100%;height:58%;background:#EF9F27;clip-path:polygon(0 0,100% 0,50% 100%)}
+.pb .bl{position:absolute;left:22%;top:40%;width:56%;height:36%;background:#D9822B;clip-path:polygon(0 0,100% 0,50% 100%);transform-origin:50% 0}
+.pb.talk .bl{animation:chomp .15s ease-in-out infinite alternate}
+@keyframes chomp{to{transform:translateY(55%) scaleY(1.25)}}
+#puppet.cal .pe,#puppet.cal .pb{outline:3px dashed #5fd39a;outline-offset:4px}
+#calHelp{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);width:min(90%,420px);text-align:center;color:#FFF8E6;font:600 15px var(--body);line-height:1.4;display:none}
+#puppet.cal #calHelp{display:block}
+#calHelp small{color:var(--dim)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-height:640px){.owl{width:100px}.stage{min-height:120px}.bubble{margin-bottom:24px}}
 </style>
@@ -127,6 +147,10 @@ video.mirror{transform:scaleX(-1)}
     <button class="chip" id="lPl" aria-pressed="true">Polski</button>
     <button class="chip" id="lEn" aria-pressed="false">English</button>
   </div>
+  <div class="modes" role="group" aria-label="Sowa">
+    <button class="chip" id="pupOn" aria-pressed="false">🦉 Sowa-pacynka</button>
+    <button class="chip" id="pupCal">⚙️ Kalibruj</button>
+  </div>
   <button class="big" id="go">Zaczynamy!</button>
   <p class="note">Telefon postaw na stole, tak żeby przednia kamera widziała dziecko. Karty wydrukujesz z folderu „karty”.</p>
 </div>
@@ -157,6 +181,12 @@ video.mirror{transform:scaleX(-1)}
   </div>
 </div>
 <canvas id="cv" hidden></canvas>
+<div id="puppet" hidden>
+  <div class="pe" id="peL"><div class="pupil"></div><div class="lid"></div><div class="cheek"></div></div>
+  <div class="pe" id="peR"><div class="pupil"></div><div class="lid"></div><div class="cheek"></div></div>
+  <div class="pb" id="pb"><div class="bu"></div><div class="bl"></div></div>
+  <div id="calHelp"><b>Kalibracja</b><br>Załóż sowę na telefon. Przesuń palcem kółka pod otwory: oczy i dziób.<br>Gdy pasują, stuknij dwa razy w dziób.<br><small>Żeby wyjść z sowy: przytrzymaj palec na ekranie 2 sekundy.</small></div>
+</div>
 
 <script type="module">import QrScanner from "./vendor/qr-scanner.min.js"; window.QrScanner=QrScanner; window.dispatchEvent(new Event("qrready"));</script>
 <script src="decks.js"></script>
@@ -188,7 +218,7 @@ function say(text){ $("bubble").textContent=text;
   return new Promise(res=>{ if(!("speechSynthesis" in window)||!text) return setTimeout(res,text?1200:0);
     const ss=speechSynthesis; if(ss.speaking||ss.pending) ss.cancel();
     const u=new SpeechSynthesisUtterance(text); u.lang=lang==="pl"?"pl-PL":"en-US";
-    if(voice)u.voice=voice; u.rate=1; u.pitch=1.25; talking=true; let done=false; const fin=()=>{if(!done){done=true;talking=false;res();}};
+    if(voice)u.voice=voice; u.rate=1; u.pitch=1.25; talking=true; $("pb").classList.add("talk"); let done=false; const fin=()=>{if(!done){done=true;talking=false;$("pb").classList.remove("talk");res();}};
     u.onend=fin; u.onerror=fin; setTimeout(fin, 1200+text.length*60);   // iOS sometimes never fires onend
     setTimeout(()=>{ ss.resume(); ss.speak(u); },60); });}               // short gap after cancel avoids a dropped utterance on iOS
 
@@ -242,7 +272,9 @@ const SND={
 };
 
 /* ---------- owl moods ---------- */
-function mood(m){const o=$("owl");o.classList.remove("happy","bad","think");void o.offsetWidth;if(m)o.classList.add(m);}
+function mood(m){const o=$("owl");o.classList.remove("happy","bad","think");void o.offsetWidth;if(m)o.classList.add(m);
+  ["peL","peR"].forEach(id=>{const e=$(id); e.classList.remove("happy","bad"); void e.offsetWidth; if(m==="happy"||m==="bad") e.classList.add(m);});
+  if(m==="happy"||m==="bad") setTimeout(()=>["peL","peR"].forEach(id=>$(id).classList.remove(m)),1600);}
 function flash(content,kind){const f=$("flash");f.textContent=content;f.className="flash show "+kind;setTimeout(()=>f.className="flash",1200);}
 function drawScore(){const n=mode==="story"?STORY.steps.length:5, k=mode==="story"?step:stars, ic=mode==="story"?"🚩":"⭐";
   $("score").innerHTML=Array.from({length:n},(_,i)=>`<span class="s${i<k?" on":""}">${ic}</span>`).join("");}
@@ -367,10 +399,53 @@ function toggle(a,b,on){$(a).setAttribute("aria-pressed",on);$(b).setAttribute("
 function setMode(m){mode=m;["mFind","mFree","mStory"].forEach(id=>$(id).setAttribute("aria-pressed",id==={find:"mFind",free:"mFree",story:"mStory"}[m]));}
 $("mFind").onclick=()=>setMode("find"); $("mFree").onclick=()=>setMode("free"); $("mStory").onclick=()=>setMode("story");
 $("lPl").onclick=()=>{lang="pl";toggle("lPl","lEn",true);pickVoice()}; $("lEn").onclick=()=>{lang="en";toggle("lPl","lEn",false);pickVoice()};
+/* ---------- puppet mode ---------- */
+let puppetOn=false, forceCal=false, cal=null;
+const CAL_KEY="sowa-pacynka";
+function loadCal(){ try{ cal=JSON.parse(localStorage.getItem(CAL_KEY)); }catch(e){ cal=null; } return !!cal; }
+function saveCal(){ try{ localStorage.setItem(CAL_KEY,JSON.stringify(cal)); }catch(e){} }
+function placePuppet(){ const W=innerWidth,H=innerHeight, c=cal||{l:[.5-78/W,.29],r:[.5+78/W,.29],b:[.5,.43]};
+  [["peL",c.l],["peR",c.r],["pb",c.b]].forEach(([id,p])=>{ $(id).style.left=p[0]*W+"px"; $(id).style.top=p[1]*H+"px"; }); }
+function camLooksBlocked(){ const vw=video.videoWidth,vh=video.videoHeight; if(!vw) return true;
+  bctx.drawImage(video,0,0,vw,vh,0,0,64,48); const d=bctx.getImageData(0,0,64,48).data; let m=0,v=0,n=d.length/4;
+  for(let i=0;i<d.length;i+=4) m+=d[i]*.3+d[i+1]*.59+d[i+2]*.11; m/=n;
+  for(let i=0;i<d.length;i+=4){ const g=d[i]*.3+d[i+1]*.59+d[i+2]*.11; v+=(g-m)*(g-m); } v/=n;
+  return m<18 || v<40; }
+function calibrate(){ return new Promise(done=>{ const P=$("puppet"); P.classList.add("cal");
+  say("Przesuń kółka pod otwory w sowie. Gdy pasują, stuknij dwa razy w dziób.");
+  let drag=null, lastTap=0;
+  const down=e=>{ const t=e.target.closest(".pe,.pb"); if(!t) return; drag=t; t.setPointerCapture?.(e.pointerId);
+    if(t.id==="pb"){ const now=performance.now(); if(now-lastTap<350){ finish(); return; } lastTap=now; } };
+  const move=e=>{ if(!drag) return; drag.style.left=e.clientX+"px"; drag.style.top=e.clientY+"px"; };
+  const up=()=>{ drag=null; };
+  async function finish(){ const f=id=>[parseFloat($(id).style.left)/innerWidth, parseFloat($(id).style.top)/innerHeight];
+    cal={l:f("peL"),r:f("peR"),b:f("pb")}; saveCal();
+    await wait(400);
+    if(camLooksBlocked()){ await say("Kamera jest zasłonięta. Przesuń sowę trochę w bok, żeby kamera wyglądała między uszami."); return; }
+    P.classList.remove("cal"); P.removeEventListener("pointerdown",down); P.removeEventListener("pointermove",move); P.removeEventListener("pointerup",up);
+    done(); }
+  P.addEventListener("pointerdown",down); P.addEventListener("pointermove",move); P.addEventListener("pointerup",up); }); }
+async function enterPuppet(needCal){ facing="user"; wide=false; wideId=null; MIN_CODE=0.05; await startCam();
+  $("puppet").hidden=false; placePuppet(); try{ document.documentElement.requestFullscreen?.().catch(()=>{}); }catch(e){}
+  if(needCal) await calibrate(); }
+function exitPuppet(){ $("puppet").hidden=true; $("puppet").classList.remove("cal"); try{ document.exitFullscreen?.().catch(()=>{}); }catch(e){} }
+/* long press anywhere on the black screen leaves puppet mode */
+let lpTimer=null;
+$("puppet").addEventListener("pointerdown",()=>{ if($("puppet").classList.contains("cal")) return; lpTimer=setTimeout(()=>{ exitPuppet(); $("home").click(); },2000); });
+$("puppet").addEventListener("pointerup",()=>clearTimeout(lpTimer)); $("puppet").addEventListener("pointercancel",()=>clearTimeout(lpTimer));
+/* blinking and glancing */
+(function blinkLoop(){ setTimeout(()=>{ if(!$("puppet").hidden){ ["peL","peR"].forEach(id=>$(id).classList.add("blink")); setTimeout(()=>["peL","peR"].forEach(id=>$(id).classList.remove("blink")),140);
+    if(Math.random()<.3){ const c=Math.random()<.5?"look-l":"look-r"; ["peL","peR"].forEach(id=>$(id).classList.add(c)); setTimeout(()=>["peL","peR"].forEach(id=>$(id).classList.remove(c)),900); } }
+  blinkLoop(); }, 2500+Math.random()*3500); })();
+addEventListener("resize",()=>{ if(!$("puppet").hidden && !$("puppet").classList.contains("cal")) placePuppet(); });
+$("pupOn").onclick=()=>{ puppetOn=!puppetOn; $("pupOn").setAttribute("aria-pressed",puppetOn); };
+$("pupCal").onclick=()=>{ puppetOn=true; forceCal=true; $("pupOn").setAttribute("aria-pressed",true); $("go").click(); };
 $("go").onclick=async()=>{ if(mode==="story"&&lang!=="pl"){ lang="pl"; toggle("lPl","lEn",true); pickVoice(); } unlockAudio(); say(""); $("start").hidden=true; $("app").hidden=false; stars=0; step=0; drawScore();
   $("hint").textContent=T[lang].hint; busy=true;
   const ok=navigator.mediaDevices?.getUserMedia ? await startCam() : false;
   if(!ok){ setTap(true); await say(T[lang].nocam); } else setTap(false);
+  if(puppetOn && ok) await enterPuppet(forceCal || !loadCal());
+  forceCal=false;
   mood("happy"); await say(mode==="story"?STORY.intro:T[lang].hello); ask(); };
 $("again").onclick=()=>{ if(busy) return; busy=true; ask_repeat(); };
 async function ask_repeat(){ if(mode==="story") await say(STORY.steps[step].ask); else if(mode==="find"&&target) await say(T[lang].ask(vname(target))); else await say(T[lang].free); busy=false; }
@@ -385,7 +460,7 @@ $("wide").onclick=async()=>{ wide=!wide; $("wide").setAttribute("aria-pressed",w
   if(!tapMode) await startCam();
   if(wide && !wideId){ const c=stream?.getVideoTracks()[0]?.getCapabilities?.(); if(!(c && c.zoom && c.zoom.min<1)) say(lang==="pl"?"Ten telefon nie daje w przeglądarce szerszego kąta. Gram na zwykłej kamerze.":"This phone has no wider lens in the browser. Using the normal camera."); } };
 $("tap").onclick=()=>setTap(!tapMode);
-$("home").onclick=()=>{ stopCam(); speechSynthesis?.cancel(); $("app").hidden=true; $("start").hidden=false; };
+$("home").onclick=()=>{ exitPuppet(); stopCam(); speechSynthesis?.cancel(); $("app").hidden=true; $("start").hidden=false; };
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) stopCam(); else if(!$("app").hidden && !tapMode) startCam(); });
 try{ navigator.wakeLock?.request("screen").catch(()=>{}); }catch(e){}
 $("decks").innerHTML=window.DECKS.map(d=>`<button class="chip" data-id="${d.id}" aria-pressed="false">${d.cards[0].e} ${d.pl}</button>`).join("");
