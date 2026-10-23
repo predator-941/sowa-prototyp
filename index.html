@@ -252,24 +252,28 @@ async function startCam(){ stopCam();
     await getEngine(); scanLoop(++loopId); return true;
   }catch(e){ return false; } }
 function stopCam(){ loopId++; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
-/* regions: whole frame, then a ~1.7x zoom on the centre, then the lower half where small hands hold cards */
+/* regions: whole frame, then a ~1.7x zoom on the centre. No separate bottom pass: it picked up cards lying on the table or floor */
 function region(pass){ const vw=video.videoWidth, vh=video.videoHeight;
-  const r = pass===0 ? {x:0,y:0,width:vw,height:vh}
-          : pass===1 ? {x:vw*.2,y:vh*.2,width:vw*.6,height:vh*.6}
-          :            {x:vw*.2,y:vh*.35,width:vw*.6,height:vh*.65};
+  const r = pass===0 ? {x:0,y:0,width:vw,height:vh} : {x:vw*.2,y:vh*.2,width:vw*.6,height:vh*.6};
   const ds=Math.min(720,Math.round(r.width)); return {...r, downScaledWidth:ds, downScaledHeight:Math.round(ds*r.height/r.width)}; }
 const cv=$("cv");
+const MIN_CODE=0.06;   // code must span at least 6% of the frame width: a card held up, not one lying far away
 async function scanLoop(id){ let pass=0;
   while(id===loopId && stream){
     if(!tapMode && video.readyState>=2 && video.videoWidth && engine){
       try{ const r=await QrScanner.scanImage(video,{qrEngine:engine,canvas:cv,scanRegion:region(pass),returnDetailedScanResult:true});
-           if(r && r.data) gotCode(r.data); }catch(e){ /* no code in this frame */ }
-      pass=(pass+1)%3;
+           if(r && r.data) gotCode(r); }catch(e){ /* no code in this frame */ }
+      pass=(pass+1)%2;
     }
     await wait(70);
   } }
-function gotCode(code){ const cid=code.replace(/^(SOWA1|S1):/i,"").trim().toLowerCase(); if(!byId[cid]) return;
-  const now=performance.now(); $("view").classList.add("seen"); setTimeout(()=>$("view").classList.remove("seen"),250);
+let candidate="", candAt=0;
+function gotCode(r){ const cid=r.data.replace(/^(SOWA1|S1):/i,"").trim().toLowerCase(); if(!byId[cid]) return;
+  const xs=(r.cornerPoints||[]).map(p=>p.x); const w=xs.length? Math.max(...xs)-Math.min(...xs) : video.videoWidth;
+  if(w < video.videoWidth*MIN_CODE) return;                       // too small = lying somewhere in the background
+  const now=performance.now();
+  if(cid!==candidate || now-candAt>700){ candidate=cid; candAt=now; return; }   // needs two reads in a row: held, not passing by
+  candAt=now; $("view").classList.add("seen"); setTimeout(()=>$("view").classList.remove("seen"),250);
   if(cid===lastCode && now-lastAt<1500) return; lastCode=cid; lastAt=now; onCard(cid); }
 
 /* ---------- tap fallback ---------- */
