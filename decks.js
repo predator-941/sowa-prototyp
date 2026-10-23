@@ -189,6 +189,7 @@ window.DECKS = [
   "cards": [
    {
     "id": "pies",
+    "snd": "dog",
     "e": "🐶",
     "pl": "pies",
     "en": "dog",
@@ -198,6 +199,7 @@ window.DECKS = [
    },
    {
     "id": "kot",
+    "snd": "cat",
     "e": "🐱",
     "pl": "kot",
     "en": "cat",
@@ -207,6 +209,7 @@ window.DECKS = [
    },
    {
     "id": "krowa",
+    "snd": "cow",
     "e": "🐮",
     "pl": "krowa",
     "en": "cow",
@@ -216,6 +219,7 @@ window.DECKS = [
    },
    {
     "id": "swinia",
+    "snd": "pig",
     "e": "🐷",
     "pl": "świnka",
     "en": "pig",
@@ -225,6 +229,7 @@ window.DECKS = [
    },
    {
     "id": "kon",
+    "snd": "horse",
     "e": "🐴",
     "pl": "koń",
     "en": "horse",
@@ -234,6 +239,7 @@ window.DECKS = [
    },
    {
     "id": "kura",
+    "snd": "hen",
     "e": "🐔",
     "pl": "kura",
     "en": "hen",
@@ -243,6 +249,7 @@ window.DECKS = [
    },
    {
     "id": "owca",
+    "snd": "sheep",
     "e": "🐑",
     "pl": "owca",
     "en": "sheep",
@@ -252,6 +259,7 @@ window.DECKS = [
    },
    {
     "id": "kaczka",
+    "snd": "duck",
     "e": "🦆",
     "pl": "kaczka",
     "en": "duck",
@@ -261,6 +269,7 @@ window.DECKS = [
    },
    {
     "id": "lew",
+    "snd": "lion",
     "e": "🦁",
     "pl": "lew",
     "en": "lion",
@@ -270,6 +279,7 @@ window.DECKS = [
    },
    {
     "id": "slon",
+    "snd": "elephant",
     "e": "🐘",
     "pl": "słoń",
     "en": "elephant",
@@ -279,6 +289,7 @@ window.DECKS = [
    },
    {
     "id": "zyrafa",
+    "snd": "munch",
     "e": "🦒",
     "pl": "żyrafa",
     "en": "giraffe",
@@ -288,6 +299,7 @@ window.DECKS = [
    },
    {
     "id": "malpa",
+    "snd": "monkey",
     "e": "🐵",
     "pl": "małpka",
     "en": "monkey",

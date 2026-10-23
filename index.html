@@ -191,6 +191,14 @@ function tone(f,dur,type="sine",vol=.18,when=0,slideTo){const c=actx(),o=c.creat
 function noise(dur,vol=.15,when=0,lp=1200){const c=actx(),b=c.createBuffer(1,c.sampleRate*dur,c.sampleRate),d=b.getChannelData(0);
   for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; const s=c.createBufferSource(),g=c.createGain(),f=c.createBiquadFilter(),t=c.currentTime+when;
   f.type="lowpass";f.frequency.value=lp;s.buffer=b;g.gain.setValueAtTime(vol,t);g.gain.linearRampToValueAtTime(0,t+dur);s.connect(f).connect(g).connect(c.destination);s.start(t);}
+function vox(o){ const c=actx(), t=c.currentTime+(o.when||0), d=o.dur, f=o.f;
+  const osc=c.createOscillator(); osc.type=o.type||"sawtooth"; osc.frequency.setValueAtTime(f[0],t);
+  if(f.length===2) osc.frequency.exponentialRampToValueAtTime(f[1],t+d);
+  if(f.length===3){ osc.frequency.exponentialRampToValueAtTime(f[1],t+d*.4); osc.frequency.exponentialRampToValueAtTime(f[2],t+d); }
+  if(o.vib){ const l=c.createOscillator(), lg=c.createGain(); l.frequency.value=o.vib[0]; lg.gain.value=o.vib[1]; l.connect(lg).connect(osc.frequency); l.start(t); l.stop(t+d+.05); }
+  const g=c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(o.vol||.4,t+.03); g.gain.setValueAtTime(o.vol||.4,t+d*.7); g.gain.linearRampToValueAtTime(0,t+d);
+  (o.fm||[800]).forEach(fr=>{ const bp=c.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=fr; bp.Q.value=o.q||4; osc.connect(bp).connect(g); });
+  g.connect(c.destination); osc.start(t); osc.stop(t+d+.05); }
 const SND={
  siren:()=>{for(let i=0;i<4;i++)tone(i%2?660:880,.35,"triangle",.14,i*.36);},
  police:()=>{for(let i=0;i<3;i++)tone(600,.45,"sawtooth",.07,i*.45,1100);},
@@ -200,6 +208,19 @@ const SND={
  whoosh:()=>noise(1.1,.25,0,900),
  chopper:()=>{for(let i=0;i<10;i++)noise(.06,.3,i*.1,500);},
  ship:()=>{tone(110,1.1,"sawtooth",.1);tone(165,1.1,"sine",.08);},
+/* animals: a source tone shaped by a vocal-tract-like filter, with optional vibrato */
+ dog:()=>{vox({f:[320,170],dur:.16,type:"square",fm:[600,1400],vol:.5});vox({f:[300,160],dur:.18,type:"square",fm:[600,1400],vol:.5,when:.32});noise(.08,.25,0,1800);noise(.08,.25,.32,1800);},
+ cat:()=>vox({f:[480,820,420],dur:.8,fm:[950,2300],vol:.45,vib:[6,10]}),
+ cow:()=>vox({f:[105,130,90],dur:1.4,fm:[300,750],vol:.7,vib:[4,4]}),
+ pig:()=>{vox({f:[190,140],dur:.22,fm:[450,1100],vol:.5,vib:[35,25]});vox({f:[200,150],dur:.25,fm:[450,1100],vol:.5,vib:[35,25],when:.3});},
+ horse:()=>vox({f:[650,1150,450],dur:1.2,fm:[850,2100],vol:.4,vib:[13,70]}),
+ hen:()=>{[0,.14,.28,.42].forEach(t=>vox({f:[620,430],dur:.09,type:"square",fm:[900,2000],vol:.35,when:t}));vox({f:[700,950,500],dur:.35,type:"square",fm:[900,2000],vol:.35,when:.6});},
+ sheep:()=>vox({f:[360,330],dur:1,fm:[700,1600],vol:.5,vib:[9,30]}),
+ duck:()=>{vox({f:[400,300],dur:.25,type:"square",fm:[1100,2600],q:8,vol:.45});vox({f:[400,300],dur:.25,type:"square",fm:[1100,2600],q:8,vol:.45,when:.35});},
+ lion:()=>{noise(1.5,.5,0,380);vox({f:[95,70],dur:1.4,fm:[250,600],vol:.6,vib:[22,12]});},
+ elephant:()=>vox({f:[420,760,520],dur:1.1,type:"square",fm:[1300,2700],vol:.35,vib:[7,18]}),
+ munch:()=>{for(let i=0;i<5;i++)noise(.07,.35,i*.18,2500);},
+ monkey:()=>{[0,.18,.36,.54].forEach((t,i)=>vox({f:[380+i*90,560+i*120],dur:.15,fm:[800,1700],vol:.4,when:t}));},
  good:()=>{[523,659,784,1046].forEach((f,i)=>tone(f,.18,"triangle",.15,i*.09));},
  bad:()=>tone(220,.3,"square",.06,0,160)
 };
