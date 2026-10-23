@@ -40,7 +40,11 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--sky-2),var(--sky) 70%);
 /* camera window */
 .view.seen{border-color:var(--leaf)}
 .view{transition:border-color .15s;flex:1;min-height:0;position:relative;border-radius:28px;overflow:hidden;background:#0f0d2e;border:4px solid var(--sky-2)}
-video{width:100%;height:100%;object-fit:cover;display:block}
+video{width:100%;height:100%;object-fit:cover;display:block;opacity:0}
+.view.peek video{opacity:1}
+.stage-card{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);font:800 18px var(--display);pointer-events:none}
+.stage-card b{display:block;font-size:min(30vw,150px);line-height:1;filter:drop-shadow(0 6px 0 rgba(0,0,0,.25))}
+.view.peek .stage-card{display:none}
 video.mirror{transform:scaleX(-1)}
 .frame{position:absolute;inset:8% 10%;border:4px dashed rgba(255,211,92,.85);border-radius:22px;pointer-events:none}
 .hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-weight:800;font-size:15px;color:var(--moon);text-shadow:0 2px 6px #000}
@@ -136,6 +140,7 @@ video.mirror{transform:scaleX(-1)}
   <div class="view" id="view">
     <video id="video" playsinline muted autoplay class="mirror"></video>
     <canvas id="ov" hidden style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+    <div class="stage-card" id="stageCard"><div><b>🃏</b>Pokaż kartę sowie</div></div>
     <div class="frame" id="frame"></div>
     <div class="hint" id="hint">Pokaż kartę sowie</div>
     <div class="grid" id="grid" hidden></div>
@@ -328,7 +333,7 @@ function drawDebug(){ if(!debug) return; requestAnimationFrame(drawDebug);
   octx.fillStyle="rgba(0,0,0,.55)"; octx.fillRect(8,8,190,22); octx.fillStyle="#fff"; octx.font="12px Nunito, sans-serif";
   octx.fillText(`${vw}×${vh} · próg ${Math.round(MIN_CODE*1000)/10}%${wide?" · szeroko":""}`,14,23); }
 $("dbg").onclick=()=>{ debug=!debug; $("dbg").setAttribute("aria-pressed",debug); ov.hidden=!debug;
-  video.style.objectFit=debug?"contain":""; $("frame").hidden=debug||tapMode; $("hint").hidden=debug||tapMode; if(debug) drawDebug(); };
+  video.style.objectFit=debug?"contain":""; $("view").classList.toggle("peek",debug); $("frame").hidden=debug||tapMode; $("hint").hidden=debug||tapMode; if(debug) drawDebug(); };
 async function scanLoop(id){ let pass=0;
   while(id===loopId && stream){
     if(!tapMode && video.readyState>=2 && video.videoWidth){ try{ blurCheck(); }catch(e){} }
