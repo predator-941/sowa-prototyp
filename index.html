@@ -265,15 +265,13 @@ async function scanLoop(id){ let pass=0;
            if(r && r.data) gotCode(r); }catch(e){ /* no code in this frame */ }
       pass=(pass+1)%2;
     }
-    await wait(70);
+    await wait(25);
   } }
-let candidate="", candAt=0;
 function gotCode(r){ const cid=r.data.replace(/^(SOWA1|S1):/i,"").trim().toLowerCase(); if(!byId[cid]) return;
   const xs=(r.cornerPoints||[]).map(p=>p.x); const w=xs.length? Math.max(...xs)-Math.min(...xs) : video.videoWidth;
   if(w < video.videoWidth*MIN_CODE) return;                       // too small = lying somewhere in the background
   const now=performance.now();
-  if(cid!==candidate || now-candAt>700){ candidate=cid; candAt=now; return; }   // needs two reads in a row: held, not passing by
-  candAt=now; $("view").classList.add("seen"); setTimeout(()=>$("view").classList.remove("seen"),250);
+  $("view").classList.add("seen"); setTimeout(()=>$("view").classList.remove("seen"),250);
   if(cid===lastCode && now-lastAt<1500) return; lastCode=cid; lastAt=now; onCard(cid); }
 
 /* ---------- tap fallback ---------- */
