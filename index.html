@@ -239,11 +239,12 @@ if("speechSynthesis" in window){speechSynthesis.onvoiceschanged=pickVoice; pickV
 let talking=false, lastHint=0;
 function say(text){ $("bubble").textContent=text;
   return new Promise(res=>{ if(!("speechSynthesis" in window)||!text) return setTimeout(res,text?1200:0);
-    const ss=speechSynthesis; if(ss.speaking||ss.pending) ss.cancel();
+    const ss=speechSynthesis, busySpeech=ss.speaking||ss.pending; if(busySpeech) ss.cancel(); if(!voice) pickVoice();
     const u=new SpeechSynthesisUtterance(text); u.lang=lang==="pl"?"pl-PL":"en-US";
     if(voice)u.voice=voice; u.rate=1; u.pitch=1.25; talking=true; $("pb").classList.add("talk"); let done=false; const fin=()=>{if(!done){done=true;talking=false;$("pb").classList.remove("talk");res();}};
     u.onend=fin; u.onerror=fin; setTimeout(fin, 1200+text.length*60);   // iOS sometimes never fires onend
-    setTimeout(()=>{ ss.resume(); ss.speak(u); },60); });}               // short gap after cancel avoids a dropped utterance on iOS
+    // idle: speak right away (iOS only lets speech start inside the tap); after cancel: short gap avoids a dropped utterance on iOS
+    if(busySpeech) setTimeout(()=>{ ss.resume(); ss.speak(u); },60); else { ss.resume(); ss.speak(u); } });}
 
 /* ---------- sounds (synthesized, no files) ---------- */
 let ac=null;
@@ -251,6 +252,8 @@ function actx(){ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)
   if(ac.state!=="running"){ try{ ac.resume(); }catch(e){} } return ac; }
 /* iPhone mutes Web Audio when the ring/silent switch is on; ask for "playback" so game sounds play like a video does */
 function unlockAudio(){ try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  // iOS (especially the home-screen app) allows speech only if the first utterance starts inside a tap: speak a silent one now
+  try{ if("speechSynthesis" in window && !speechSynthesis.speaking){ const u=new SpeechSynthesisUtterance(" "); u.volume=0; u.lang="pl-PL"; speechSynthesis.speak(u); } }catch(e){}
   try{ const a=new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="); a.setAttribute("playsinline",""); a.play().catch(()=>{}); }catch(e){}
   const c=actx(); try{ const o=c.createOscillator(), g=c.createGain(); g.gain.value=0; o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+.05); }catch(e){} }
 function tone(f,dur,type="sine",vol=.18,when=0,slideTo){const c=actx(),o=c.createOscillator(),g=c.createGain(),t=c.currentTime+when;
