@@ -1,63 +1,59 @@
-"""Szablon nakładki-sowy na telefon (A4, wymiary w mm). Uruchom: python3 tools/make_overlay.py"""
+"""Szablon nakładki-sowy na telefon (A4, wymiary w mm). Uruchom: python3 tools/make_overlay.py
+Mała głowa sowy z jednym okiem-otworem 10 mm. Nakładasz ją gumką na plecy telefonu i przesuwasz,
+aż otwór trafi na aparat, więc pasuje do każdego modelu."""
 import os
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "karty", "sowa-nakladka.pdf")
 
-# Geometria (mm). Pasek: nóżka (45x110) -> grzbiet (45x12, na grubość telefonu) -> przód z sową (95x150)
-AX0, AX1, AY0, AY1 = 57.5, 152.5, 132, 282      # przód
-LX0, LX1 = 82.5, 127.5                           # nóżka i grzbiet
-LY0, FOLD1, FOLD2 = 10, 120, 132                 # góra nóżki, zgięcia
-N = 4                                            # głębokość nacięć na gumki
-n1, n2 = AY0 + 25, AY1 - 25                      # wysokość nacięć
-
-cut = (f"M{LX0},{LY0} L{LX1},{LY0} L{LX1},{AY0} L{AX1},{AY0} "
-       f"L{AX1},{n1-3} L{AX1-N},{n1} L{AX1},{n1+3} L{AX1},{n2-3} L{AX1-N},{n2} L{AX1},{n2+3} L{AX1},{AY1} "
-       f"L{AX0},{AY1} L{AX0},{n2+3} L{AX0+N},{n2} L{AX0},{n2-3} L{AX0},{n1+3} L{AX0+N},{n1} L{AX0},{n1-3} "
-       f"L{AX0},{AY0} L{LX0},{AY0} Z")
+def owl(cx, cy, s=1.0, label=True):
+    """Głowa sowy wokół (cx, cy). Prawe oko (patrząc na sowę) ma otwór 10 mm na aparat."""
+    S = lambda v: v * s
+    ex, ey, er = S(15), S(-6), S(13)          # oczy
+    hole = 5                                   # promień otworu: zawsze 10 mm średnicy
+    head = (f"M{cx-S(36)},{cy+S(10)} C{cx-S(38)},{cy-S(22)} {cx-S(30)},{cy-S(34)} {cx-S(26)},{cy-S(44)} "
+            f"L{cx-S(14)},{cy-S(33)} C{cx-S(5)},{cy-S(36)} {cx+S(5)},{cy-S(36)} {cx+S(14)},{cy-S(33)} "
+            f"L{cx+S(26)},{cy-S(44)} C{cx+S(30)},{cy-S(34)} {cx+S(38)},{cy-S(22)} {cx+S(36)},{cy+S(10)} "
+            f"C{cx+S(33)},{cy+S(36)} {cx+S(14)},{cy+S(42)} {cx},{cy+S(42)} "
+            f"C{cx-S(14)},{cy+S(42)} {cx-S(33)},{cy+S(36)} {cx-S(36)},{cy+S(10)} Z")
+    # nacięcia na gumkę po bokach (V, 4 mm)
+    return f'''
+<path d="{head}" fill="#B07A4F" stroke="#1d1a4a" stroke-width="0.5"/>
+<path d="M{cx-S(36)},{cy+S(10)} l4,-2.5 l-4,-2.5" fill="#fff" stroke="#1d1a4a" stroke-width="0.5"/>
+<path d="M{cx+S(36)},{cy+S(10)} l-4,-2.5 l4,-2.5" fill="#fff" stroke="#1d1a4a" stroke-width="0.5"/>
+<ellipse cx="{cx}" cy="{cy+S(6)}" rx="{S(29)}" ry="{S(30)}" fill="#E9C9A0"/>
+<circle cx="{cx-ex}" cy="{cy+ey}" r="{er}" fill="#FFF8E6"/>
+<circle cx="{cx+ex}" cy="{cy+ey}" r="{er}" fill="#FFF8E6"/>
+<circle cx="{cx-ex}" cy="{cy+ey+1}" r="{hole}" fill="#1d1a4a"/>
+<circle cx="{cx-ex+1.8}" cy="{cy+ey-1}" r="1.3" fill="#fff"/>
+<circle cx="{cx+ex}" cy="{cy+ey}" r="{hole}" fill="#fff" stroke="#1d1a4a" stroke-width="0.5"/>
+<circle cx="{cx+ex}" cy="{cy+ey}" r="{hole+1.2}" fill="none" stroke="#EF9F27" stroke-width="1"/>
+<path d="M{cx-4},{cy+S(10)} L{cx+4},{cy+S(10)} L{cx},{cy+S(18)} Z" fill="#EF9F27"/>
+<path d="M{cx-12},{cy+S(27)} q3 3 6 0 q3 3 6 0 q3 3 6 0 q3 3 6 0" stroke="#C99A6B" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+''' + (f'<text x="{cx+ex}" y="{cy+ey+S(21)}" font-size="2.6" text-anchor="middle" fill="#1d1a4a" font-family="DejaVu Sans">wytnij Ø 1 cm</text>' if label else "")
 
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 210 297">
-<rect x="0" y="0" width="210" height="297" fill="#fff"/>
-<path d="{cut}" fill="#E9D3B4"/>
-<!-- nóżka -->
-<text x="105" y="60" font-size="4.2" text-anchor="middle" fill="#8A6A48" font-family="DejaVu Sans">nóżka</text>
-<text x="105" y="66" font-size="3" text-anchor="middle" fill="#8A6A48" font-family="DejaVu Sans">(odchyl do tyłu)</text>
-<text x="105" y="127.5" font-size="2.6" text-anchor="middle" fill="#8A6A48" font-family="DejaVu Sans">grzbiet: góra telefonu</text>
-<!-- sowa -->
-<ellipse cx="105" cy="222" rx="40" ry="56" fill="#8A5A3C"/>
-<ellipse cx="105" cy="238" rx="26" ry="34" fill="#F2D3A8"/>
-<path d="M90 232 q4 4 8 0 q4 4 8 0 q4 4 8 0 M86 244 q5 5 10 0 q5 5 10 0 q5 5 10 0" stroke="#D9A873" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-<path d="M66 205 C56 225 58 255 70 262 C68 244 70 222 76 210 Z" fill="#6E4630"/>
-<path d="M144 205 C154 225 152 255 140 262 C142 244 140 222 134 210 Z" fill="#6E4630"/>
-<path d="M98 180 L112 180 L105 193 Z" fill="#EF9F27"/>
-<path d="M92 277 l-3 5 M97 277 v5 M102 277 l3 5 M108 277 l-3 5 M113 277 v5 M118 277 l3 5" stroke="#EF9F27" stroke-width="1.6" stroke-linecap="round"/>
-<!-- okulary = okno na aparat (wyciąć) -->
-<rect x="62" y="137" width="86" height="38" rx="19" fill="#EF9F27"/>
-<rect x="65" y="140" width="80" height="32" rx="16" fill="#fff" stroke="#1d1a4a" stroke-width="0.5"/>
-<text x="105" y="153" font-size="3.4" text-anchor="middle" fill="#888" font-family="DejaVu Sans">WYTNIJ</text>
-<text x="105" y="158.5" font-size="2.7" text-anchor="middle" fill="#888" font-family="DejaVu Sans">tu patrzy aparat</text>
-<!-- linie -->
-<path d="{cut}" fill="none" stroke="#1d1a4a" stroke-width="0.5"/>
-<line x1="{LX0}" y1="{FOLD1}" x2="{LX1}" y2="{FOLD1}" stroke="#D85A30" stroke-width="0.5" stroke-dasharray="2 1.5"/>
-<line x1="{LX0}" y1="{FOLD2}" x2="{LX1}" y2="{FOLD2}" stroke="#D85A30" stroke-width="0.5" stroke-dasharray="2 1.5"/>
-<!-- instrukcja (lewa kolumna) -->
+<rect width="210" height="297" fill="#fff"/>
 <g font-family="DejaVu Sans" fill="#1d1a4a">
-<text x="10" y="16" font-size="5" font-weight="bold">Sowa</text>
-<text x="10" y="22" font-size="3.2">nakładka na telefon</text>
-<text x="10" y="34" font-size="3" font-weight="bold">Jak złożyć</text>
-<text font-size="2.7">
-<tspan x="10" y="41">1. Wydrukuj na grubym papierze</tspan><tspan x="13" dy="3.6">(200–300 g) albo naklej</tspan><tspan x="13" dy="3.6">na tekturę.</tspan>
-<tspan x="10" dy="6">2. Wytnij po ciągłej linii,</tspan><tspan x="13" dy="3.6">także okulary sowy</tspan><tspan x="13" dy="3.6">i nacięcia na gumki.</tspan>
-<tspan x="10" dy="6">3. Zegnij po przerywanych</tspan><tspan x="13" dy="3.6">liniach (grzbiet = grubość</tspan><tspan x="13" dy="3.6">telefonu).</tspan>
-<tspan x="10" dy="6">4. Przyłóż telefon plecami</tspan><tspan x="13" dy="3.6">do sowy, górą pod grzbiet.</tspan><tspan x="13" dy="3.6">Aparat ma być widoczny</tspan><tspan x="13" dy="3.6">w okularach.</tspan>
-<tspan x="10" dy="6">5. Załóż 2 gumki w nacięcia,</tspan><tspan x="13" dy="3.6">dookoła sowy i telefonu.</tspan>
-<tspan x="10" dy="6">6. Odchyl nóżkę i postaw.</tspan><tspan x="13" dy="3.6">Ekran patrzy na Ciebie,</tspan><tspan x="13" dy="3.6">sowa na dziecko.</tspan>
-<tspan x="10" dy="6">7. W grze kliknij</tspan><tspan x="13" dy="3.6">„Kamera”, żeby włączyć</tspan><tspan x="13" dy="3.6">tylną kamerę.</tspan>
+<text x="20" y="24" font-size="6" font-weight="bold">Sowa na telefon</text>
+<text x="20" y="31" font-size="3.4" fill="#555">Sowa chowa telefon, a jej oko to okienko dla aparatu.</text>
+</g>
+{owl(70, 95, 1.0)}
+{owl(150, 95, 1.0)}
+<g font-family="DejaVu Sans" fill="#1d1a4a">
+<text x="110" y="155" font-size="2.8" text-anchor="middle" fill="#555">Dwie sowy na kartce: jedna zapasowa albo dla drugiego telefonu.</text>
+<text x="20" y="175" font-size="4" font-weight="bold">Jak założyć</text>
+<text font-size="3.2">
+<tspan x="20" y="184">1. Wydrukuj na grubym papierze albo naklej na tekturę.</tspan>
+<tspan x="20" dy="7">2. Wytnij sowę po linii i wytnij otwór w oku (ok. 1 cm), np. dziurkaczem.</tspan>
+<tspan x="20" dy="7">3. Przyłóż sowę do pleców telefonu i przesuń ją tak, żeby aparat był widoczny w oku.</tspan>
+<tspan x="26" dy="5">Przy kilku obiektywach wybierz główny (zwykle największy).</tspan>
+<tspan x="20" dy="7">4. Załóż gumkę recepturkę w nacięcia po bokach, dookoła sowy i telefonu.</tspan>
+<tspan x="20" dy="7">5. Postaw telefon pionowo, ekranem do siebie (stojak, książki, kubek).</tspan>
+<tspan x="20" dy="7">6. W grze kliknij „Kamera”, żeby włączyć tylną kamerę. Sowa patrzy na dziecko.</tspan>
 </text>
-<line x1="10" y1="152" x2="20" y2="152" stroke="#1d1a4a" stroke-width="0.5"/><text x="22" y="153" font-size="2.6">cięcie</text>
-<line x1="10" y1="158" x2="20" y2="158" stroke="#D85A30" stroke-width="0.5" stroke-dasharray="2 1.5"/><text x="22" y="159" font-size="2.6">zgięcie</text>
-<text font-size="2.6" fill="#555"><tspan x="10" y="172">Okulary są szerokie,</tspan><tspan x="10" dy="3.6">żeby pasowały do aparatu</tspan><tspan x="10" dy="3.6">w różnych telefonach.</tspan><tspan x="10" dy="3.6">W razie potrzeby przesuń</tspan><tspan x="10" dy="3.6">telefon w bok.</tspan></text>
+<text x="20" y="246" font-size="3" fill="#555">Gumka trzyma sowę w dowolnym miejscu, więc działa z każdym telefonem, także w etui.</text>
 </g>
 </svg>'''
 
