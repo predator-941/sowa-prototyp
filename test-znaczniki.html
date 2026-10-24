@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Test znaczników</title>
+<style>
+/* Test page: compares ArUco 4x4 markers with the current QR codes on the live camera. Not part of the game. */
+:root{--bg:#1d1a4a;--ink:#fff8e6;--dim:#b9b3e8;--ar:#5fd39a;--qr:#4fc3f7}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:600 15px system-ui,sans-serif}
+.wrap{display:flex;flex-direction:column;height:100%;padding:max(8px,env(safe-area-inset-top)) 10px max(8px,env(safe-area-inset-bottom))}
+.view{position:relative;flex:1;min-height:0;border-radius:16px;overflow:hidden;background:#000}
+video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.mirror{transform:scaleX(-1)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.box{border-radius:12px;padding:8px 10px;background:#2b2766;line-height:1.35}
+.box b{font-size:17px} .ar b{color:var(--ar)} .qr b{color:var(--qr)}
+.box .big{font-size:26px;font-weight:800}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:999px;padding:10px 14px;font:800 14px system-ui;background:#2b2766;color:var(--ink)}
+button[aria-pressed=true]{background:#ffd35c;color:var(--bg)}
+#start{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);text-align:center;padding:24px}
+#start p{color:var(--dim);max-width:34ch;margin:0}
+#go{font-size:20px;padding:16px 30px;background:var(--ar);color:var(--bg)}
+</style>
+</head>
+<body>
+<div id="start">
+  <h2 style="margin:0">Test znaczników</h2>
+  <p>Wydrukuj kartkę z testem (znaczniki 2, 3, 4 i 5 cm oraz kody QR) i pokazuj je kamerze z różnych odległości i pod kątem.</p>
+  <p>Zielone ramki to nowe znaczniki, niebieskie to obecne kody QR.</p>
+  <button id="go">Włącz kamerę</button>
+</div>
+<div class="wrap">
+  <div class="view"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas></div>
+  <div class="stats">
+    <div class="box ar"><b>Znacznik</b><br><span class="big" id="arId">–</span><br><span id="arInfo">nie widzę</span></div>
+    <div class="box qr"><b>Kod QR</b><br><span class="big" id="qrId">–</span><br><span id="qrInfo">nie widzę</span></div>
+  </div>
+  <div class="bar">
+    <button id="flip">🔄 Przód / tył</button>
+    <button id="qrOn" aria-pressed="true">QR też</button>
+    <button id="mirror" aria-pressed="true">Lustro</button>
+    <a href="./" style="margin-left:auto"><button>🦉 Gra</button></a>
+  </div>
+</div>
+<script src="vendor/aruco/cv.js"></script>
+<script src="vendor/aruco/aruco.js"></script>
+<script src="vendor/aruco/aruco_4x4_1000.js"></script>
+<script type="module">import QrScanner from "./vendor/qr-scanner.min.js"; window.QrScanner=QrScanner;</script>
+<script>
+const $=id=>document.getElementById(id), v=$("v"), ov=$("ov"), octx=ov.getContext("2d");
+const work=document.createElement("canvas"), wctx=work.getContext("2d",{willReadFrequently:true});
+const detector=new AR.Detector({dictionaryName:"ARUCO_4X4_1000",maxHammingDistance:1});   // strict: QR finder squares are not read as markers
+const MAX_ID=50;                       // we only print ids 0..49: anything else is treated as noise
+let facing="user", stream=null, qrEngine=null, qrOn=true, mirror=true;
+let arSeen=null, qrSeen=null, arMs=0;
+
+async function start(){
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1440},height:{ideal:1080}},audio:false});
+  v.srcObject=stream; await v.play().catch(()=>{});
+  setMirror();
+}
+function setMirror(){ const m=mirror&&facing==="user"; v.classList.toggle("mirror",m); ov.classList.toggle("mirror",m); }
+
+/* map video pixel coordinates to the overlay (video uses object-fit: contain) */
+function mapper(){ const W=ov.clientWidth,H=ov.clientHeight, vw=v.videoWidth,vh=v.videoHeight, s=Math.min(W/vw,H/vh);
+  return {s, ox:(W-vw*s)/2, oy:(H-vh*s)/2}; }
+
+function draw(){
+  const dpr=devicePixelRatio||1; ov.width=ov.clientWidth*dpr; ov.height=ov.clientHeight*dpr; octx.setTransform(dpr,0,0,dpr,0,0);
+  const m=mapper(), now=performance.now();
+  const poly=(pts,col,label)=>{ octx.strokeStyle=col; octx.lineWidth=4; octx.beginPath();
+    pts.forEach((p,i)=>{ const x=m.ox+p.x*m.s, y=m.oy+p.y*m.s; i?octx.lineTo(x,y):octx.moveTo(x,y); }); octx.closePath(); octx.stroke();
+    const x=m.ox+pts[0].x*m.s, y=m.oy+pts[0].y*m.s; octx.save(); if(v.classList.contains("mirror")){ octx.translate(x,y); octx.scale(-1,1); octx.translate(-x,-y); }
+    octx.fillStyle=col; octx.font="800 18px system-ui"; octx.fillText(label,x,y-8); octx.restore(); };
+  if(arSeen && now-arSeen.t<400) arSeen.list.forEach(k=>poly(k.pts,"#5fd39a","#"+k.id));
+  if(qrSeen && now-qrSeen.t<400) poly(qrSeen.pts,"#4fc3f7",qrSeen.text);
+}
+
+/* size of a code as a share of the frame width: lets you compare how far each one still works */
+const sizePct=pts=>{ const xs=pts.map(p=>p.x); return Math.round((Math.max(...xs)-Math.min(...xs))/v.videoWidth*1000)/10; };
+
+async function loop(){
+  if(v.videoWidth){
+    const sc=Math.min(1,960/v.videoWidth), w=Math.round(v.videoWidth*sc), h=Math.round(v.videoHeight*sc);
+    work.width=w; work.height=h; wctx.drawImage(v,0,0,w,h);
+    const t0=performance.now();
+    const found=detector.detect(wctx.getImageData(0,0,w,h)).filter(k=>k.id<MAX_ID);
+    arMs=Math.round(performance.now()-t0);
+    if(found.length){
+      arSeen={t:performance.now(),list:found.map(k=>({id:k.id,pts:k.corners.map(c=>({x:c.x/sc,y:c.y/sc}))}))};
+      $("arId").textContent=found.map(k=>"#"+k.id).join(" ");
+      $("arInfo").textContent=`${sizePct(arSeen.list[0].pts)}% szer. kadru · ${arMs} ms`;
+    }
+    if(qrOn && window.QrScanner){
+      try{ if(!qrEngine) qrEngine=await QrScanner.createQrEngine();
+        const r=await QrScanner.scanImage(v,{qrEngine,canvas:work,returnDetailedScanResult:true});
+        qrSeen={t:performance.now(),text:r.data,pts:r.cornerPoints};
+        $("qrId").textContent=r.data.replace(/^S1:|^SOWA1:/,""); $("qrInfo").textContent=`${sizePct(r.cornerPoints)}% szer. kadru`;
+      }catch(e){}
+    }
+    const now=performance.now();
+    if(!arSeen||now-arSeen.t>700){ $("arId").textContent="–"; $("arInfo").textContent=`nie widzę · ${arMs} ms`; }
+    if(!qrSeen||now-qrSeen.t>700){ $("qrId").textContent="–"; $("qrInfo").textContent=qrOn?"nie widzę":"wyłączony"; }
+    draw();
+  }
+  setTimeout(loop,30);
+}
+
+$("go").onclick=async()=>{ try{ await start(); $("start").hidden=true; loop(); }catch(e){ $("start").querySelector("p").textContent="Nie mam dostępu do kamery: "+e.message; } };
+$("flip").onclick=()=>{ facing=facing==="user"?"environment":"user"; start(); };
+$("qrOn").onclick=()=>{ qrOn=!qrOn; $("qrOn").setAttribute("aria-pressed",qrOn); };
+$("mirror").onclick=()=>{ mirror=!mirror; $("mirror").setAttribute("aria-pressed",mirror); setMirror(); };
+</script>
+</body>
+</html>
