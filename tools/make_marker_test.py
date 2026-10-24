@@ -13,7 +13,7 @@ def qr_svg(data):
     r = "".join(f'<rect x="{x}" y="{y}" width="1.02" height="1.02"/>' for y, row in enumerate(m) for x, v in enumerate(row) if v)
     return f'<svg viewBox="0 0 {n} {n}" shape-rendering="crispEdges" style="width:100%;height:100%;display:block"><rect width="{n}" height="{n}" fill="#fff"/><g fill="#000">{r}</g></svg>'
 
-vendor = "".join(open(os.path.join(ROOT, "vendor", "aruco", f)).read() + "\n" for f in ("cv.js", "aruco.js", "aruco_4x4_1000.js"))
+vendor = "".join(open(os.path.join(ROOT, "vendor", "aruco", f)).read() + "\n" for f in ("cv.js", "aruco.js", "aruco_4x4_1000.js", "aruco_5x5_1000.js", "apriltag_36h11.js"))
 # (id, rozmiar czarnego kwadratu w mm); całość z białym marginesem = 8/6 tego
 MARKERS = [(1, 20), (2, 30), (3, 40), (4, 50)]
 QRS = [(40, "S1:krowa"), (64, "S1:krowa")]
@@ -29,15 +29,17 @@ html = f"""<!doctype html><meta charset="utf-8"><style>{CSS}</style><body>
 <p>Otwórz w telefonie stronę test-znaczniki.html. Pokazuj kamerze każdy element z coraz większej odległości i pod kątem.
 Zapisz, do jakiej odległości łapie. Rozmiar podany przy znaczniku to czarny kwadrat.</p>
 <div class="row" id="mk"></div>
+<div class="pg"></div><h1>Inne rodzaje znaczników i kody QR</h1><div class="row" id="mk2"></div>
 <div class="row">{"".join(f'<div class="it"><div style="width:{s}mm;height:{s}mm">{qr_svg(d)}</div>QR {s/10:g} cm (krowa)</div>' for s, d in QRS)}</div>
 <div class="pg"></div><h1>Karty na próbę: znacznik na środku tyłu karty 9×9 cm</h1>
 <p>Wytnij i daj dziecku, niech pokaże sowie. Sprawdź, czy rączka zasłania znacznik.</p>
 <div class="row"><div class="card"><div id="c1"></div>znacznik #5 · 3 cm</div><div class="card"><div id="c2"></div>znacznik #6 · 4 cm</div></div>
 <script>{vendor}</script>
 <script>
-const D=new AR.Dictionary("ARUCO_4X4_1000");
-const svg=(id,mm)=>{{ const t=mm*8/6; return `<div style="width:${{t}}mm;height:${{t}}mm">`+D.generateSVG(id).replace("<svg ",'<svg style="width:100%;height:100%;display:block" shape-rendering="crispEdges" ')+"</div>"; }};
-document.getElementById("mk").innerHTML={[list(m) for m in MARKERS]}.map(([id,mm])=>`<div class="it">${{svg(id,mm)}}znacznik #${{id}} · ${{mm/10}} cm</div>`).join("");
+const D=new AR.Dictionary("ARUCO_4X4_1000"), D5=new AR.Dictionary("ARUCO_5X5_1000"), DA=new AR.Dictionary("APRILTAG_36h11");
+const svg=(id,mm,dic=D,cells=6)=>{{ const t=mm*(cells+2)/cells; return `<div style="width:${{t}}mm;height:${{t}}mm">`+dic.generateSVG(id).replace("<svg ",'<svg style="width:100%;height:100%;display:block" shape-rendering="crispEdges" ')+"</div>"; }};
+document.getElementById("mk").innerHTML={[list(m) for m in MARKERS]}.map(([id,mm])=>`<div class="it">${{svg(id,mm)}}ArUco 4×4 #${{id}} · ${{mm/10}} cm</div>`).join("");
+document.getElementById("mk2").innerHTML=[[7,30,D5,7,"ArUco 5×5 #7 · 3 cm"],[8,30,DA,8,"AprilTag #8 · 3 cm"],[9,40,D5,7,"ArUco 5×5 #9 · 4 cm"],[10,40,DA,8,"AprilTag #10 · 4 cm"]].map(([id,mm,d,c,l])=>`<div class="it">${{svg(id,mm,d,c)}}${{l}}</div>`).join("");
 document.getElementById("c1").innerHTML=svg(5,30); document.getElementById("c2").innerHTML=svg(6,40);
 </script></body>"""
 

@@ -36,7 +36,7 @@ button[aria-pressed=true]{background:#ffd35c;color:var(--bg)}
 <div class="wrap">
   <div class="view"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas></div>
   <div class="stats">
-    <div class="box ar"><b>Znacznik</b><br><span class="big" id="arId">–</span><br><span id="arInfo">nie widzę</span></div>
+    <div class="box ar"><b>Znacznik</b><br><span class="big" id="arId" style="font-size:20px">–</span><br><span id="arInfo">nie widzę</span></div>
     <div class="box qr"><b>Kod QR</b><br><span class="big" id="qrId">–</span><br><span id="qrInfo">nie widzę</span></div>
   </div>
   <div class="bar">
@@ -49,11 +49,16 @@ button[aria-pressed=true]{background:#ffd35c;color:var(--bg)}
 <script src="vendor/aruco/cv.js"></script>
 <script src="vendor/aruco/aruco.js"></script>
 <script src="vendor/aruco/aruco_4x4_1000.js"></script>
+<script src="vendor/aruco/aruco_5x5_1000.js"></script>
+<script src="vendor/aruco/apriltag_36h11.js"></script>
 <script type="module">import QrScanner from "./vendor/qr-scanner.min.js"; window.QrScanner=QrScanner;</script>
 <script>
 const $=id=>document.getElementById(id), v=$("v"), ov=$("ov"), octx=ov.getContext("2d");
 const work=document.createElement("canvas"), wctx=work.getContext("2d",{willReadFrequently:true});
-const detector=new AR.Detector({dictionaryName:"ARUCO_4X4_1000",maxHammingDistance:1});   // strict: QR finder squares are not read as markers
+// three marker families side by side; strict matching so QR finder squares are not read as markers
+const KINDS=[{name:"4×4",det:new AR.Detector({dictionaryName:"ARUCO_4X4_1000",maxHammingDistance:1})},
+             {name:"5×5",det:new AR.Detector({dictionaryName:"ARUCO_5X5_1000",maxHammingDistance:1})},
+             {name:"April",det:new AR.Detector({dictionaryName:"APRILTAG_36h11",maxHammingDistance:2})}];
 const MAX_ID=50;                       // we only print ids 0..49: anything else is treated as noise
 let facing="user", stream=null, qrEngine=null, qrOn=true, mirror=true;
 let arSeen=null, qrSeen=null, arMs=0;
@@ -77,7 +82,7 @@ function draw(){
     pts.forEach((p,i)=>{ const x=m.ox+p.x*m.s, y=m.oy+p.y*m.s; i?octx.lineTo(x,y):octx.moveTo(x,y); }); octx.closePath(); octx.stroke();
     const x=m.ox+pts[0].x*m.s, y=m.oy+pts[0].y*m.s; octx.save(); if(v.classList.contains("mirror")){ octx.translate(x,y); octx.scale(-1,1); octx.translate(-x,-y); }
     octx.fillStyle=col; octx.font="800 18px system-ui"; octx.fillText(label,x,y-8); octx.restore(); };
-  if(arSeen && now-arSeen.t<400) arSeen.list.forEach(k=>poly(k.pts,"#5fd39a","#"+k.id));
+  if(arSeen && now-arSeen.t<400) arSeen.list.forEach(k=>poly(k.pts,"#5fd39a",k.kind+" #"+k.id));
   if(qrSeen && now-qrSeen.t<400) poly(qrSeen.pts,"#4fc3f7",qrSeen.text);
 }
 
@@ -89,11 +94,12 @@ async function loop(){
     const sc=Math.min(1,960/v.videoWidth), w=Math.round(v.videoWidth*sc), h=Math.round(v.videoHeight*sc);
     work.width=w; work.height=h; wctx.drawImage(v,0,0,w,h);
     const t0=performance.now();
-    const found=detector.detect(wctx.getImageData(0,0,w,h)).filter(k=>k.id<MAX_ID);
+    const img=wctx.getImageData(0,0,w,h), found=[];
+    KINDS.forEach(K=>K.det.detect(img).filter(k=>k.id<MAX_ID).forEach(k=>{ k.kind=K.name; found.push(k); }));
     arMs=Math.round(performance.now()-t0);
     if(found.length){
-      arSeen={t:performance.now(),list:found.map(k=>({id:k.id,pts:k.corners.map(c=>({x:c.x/sc,y:c.y/sc}))}))};
-      $("arId").textContent=found.map(k=>"#"+k.id).join(" ");
+      arSeen={t:performance.now(),list:found.map(k=>({id:k.id,kind:k.kind,pts:k.corners.map(c=>({x:c.x/sc,y:c.y/sc}))}))};
+      $("arId").textContent=found.map(k=>k.kind+" #"+k.id).join(", ");
       $("arInfo").textContent=`${sizePct(arSeen.list[0].pts)}% szer. kadru · ${arMs} ms`;
     }
     if(qrOn && window.QrScanner){

@@ -12,7 +12,7 @@ Gra dla dzieci: sowa zadaje pytania, dziecko pokazuje wydrukowaną kartę przedn
 - `tools/make_cards.py`: z `decks.py` generuje `decks.js` i PDF-y (wymaga `pip install qrcode playwright`).
 
 ## Test znaczników
-`test-znaczniki.html` to osobna strona testowa (nie część gry): kamera porównuje na żywo nowe znaczniki ArUco 4×4 (biblioteka js-aruco2 w `vendor/aruco/`, licencja w środku) z obecnymi kodami QR. Kartkę do druku robi `tools/make_marker_test.py` → `karty/test-znaczniki.pdf`.
+`test-znaczniki.html` to osobna strona testowa (nie część gry): kamera porównuje na żywo znaczniki ArUco 4×4, ArUco 5×5 i AprilTag 36h11 (biblioteka js-aruco2 w `vendor/aruco/`, licencja w środku) z obecnymi kodami QR. Kartkę do druku robi `tools/make_marker_test.py` → `karty/test-znaczniki.pdf`.
 
 ## Kody kart
 Przód karty to duży obrazek, tył to kod QR na środku z ramką do trzymania. Kod ma tekst `S1:<id>`, np. `S1:karetka` (stare `SOWA1:` też działa).
