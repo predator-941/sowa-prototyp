@@ -34,12 +34,17 @@ Zapisz, do jakiej odległości łapie. Rozmiar podany przy znaczniku to czarny k
 <div class="pg"></div><h1>Karty na próbę: znacznik na środku tyłu karty 9×9 cm</h1>
 <p>Wytnij i daj dziecku, niech pokaże sowie. Sprawdź, czy rączka zasłania znacznik.</p>
 <div class="row"><div class="card"><div id="c1"></div>znacznik #5 · 3 cm</div><div class="card"><div id="c2"></div>znacznik #6 · 4 cm</div></div>
+<div class="row"><div class="card" style="position:relative;display:block" id="c3"></div><div class="card" style="position:relative;display:block" id="c4"></div></div>
+<p>Dolne karty: pięć takich samych znaczników jak piątka na kostce (#11 po 1,7 cm, #12 po 2 cm). Rączka zasłoni jeden czy dwa, reszta dalej działa.</p>
 <script>{vendor}</script>
 <script>
 const D=new AR.Dictionary("ARUCO_4X4_1000"), D5=new AR.Dictionary("ARUCO_5X5_1000"), DA=new AR.Dictionary("APRILTAG_36h11");
 const svg=(id,mm,dic=D,cells=6)=>{{ const t=mm*(cells+2)/cells; return `<div style="width:${{t}}mm;height:${{t}}mm">`+dic.generateSVG(id).replace("<svg ",'<svg style="width:100%;height:100%;display:block" shape-rendering="crispEdges" ')+"</div>"; }};
 document.getElementById("mk").innerHTML={[list(m) for m in MARKERS]}.map(([id,mm])=>`<div class="it">${{svg(id,mm)}}ArUco 4×4 #${{id}} · ${{mm/10}} cm</div>`).join("");
 document.getElementById("mk2").innerHTML=[[7,30,D5,7,"ArUco 5×5 #7 · 3 cm"],[8,30,DA,8,"AprilTag #8 · 3 cm"],[9,40,D5,7,"ArUco 5×5 #9 · 4 cm"],[10,40,DA,8,"AprilTag #10 · 4 cm"]].map(([id,mm,d,c,l])=>`<div class="it">${{svg(id,mm,d,c)}}${{l}}</div>`).join("");
+const dice=(id,mm)=>{{ const t=mm*8/6, pos=[[50,50],[22,22],[78,22],[22,78],[78,78]];
+  return pos.map(([x,y])=>`<div style="position:absolute;left:calc(${{x}}% - ${{t/2}}mm);top:calc(${{y}}% - ${{t/2}}mm)">${{svg(id,mm)}}</div>`).join(""); }};
+document.getElementById("c3").innerHTML=dice(11,17); document.getElementById("c4").innerHTML=dice(12,20);
 document.getElementById("c1").innerHTML=svg(5,30); document.getElementById("c2").innerHTML=svg(6,40);
 </script></body>"""
 
